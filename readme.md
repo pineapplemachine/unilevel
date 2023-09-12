@@ -20,13 +20,13 @@ Ensure that the [SConstruct](https://scons.org/doc/production/HTML/scons-user/ch
 python -m pip install scons
 ```
 
-Once `scons` is installed and Unilevel's dependencies have been made available, run this command in the repository's root directory to build Unilevel in release mode:
+Once `scons` is installed and Unilevel's dependencies have been made available, run this command in the repository's root directory to build Unilevel in release mode, writing a `unilevel` or `unilevel.exe` executable file to the same root directory:
 
 ```
 scons
 ```
 
-Unilevel can be built in one of several modes, using the `mode` argument to `scons`. When the argument is omitted, `mode=release` is used by default.
+Unilevel can be built in one of several modes, using the `mode` argument to `scons`. When the argument is omitted, `mode=release` is used by default. Binaries produced via modes other than `release` have the mode added as a suffix to their name, e.g. `unilevel_debug` or `unilevel_debug.exe` when compiling in debug mode.
 
 ```
 # Release mode: Default, same as omitting the argument.

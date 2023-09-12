@@ -55,7 +55,6 @@ FREETYPE_ARCHIVE_EXTRACT_PATH = "%s/freetype-%s" % (WORKING_PATH, FREETYPE_VERSI
 FREETYPE_SRC_PATH = "%s/freetype-%s" % (FREETYPE_ARCHIVE_EXTRACT_PATH, FREETYPE_VERSION)
 FREETYPE_SRC_INCLUDE_PATH = "%s/include" % FREETYPE_SRC_PATH
 FREETYPE_LIB_PATH = "%s/freetype-%s/objs/libfreetype.a" % (FREETYPE_ARCHIVE_EXTRACT_PATH, FREETYPE_VERSION)
-#NOTE: recursive
 
 def main():
     print("Getting Unilevel dependencies.")
