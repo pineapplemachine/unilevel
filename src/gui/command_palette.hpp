@@ -30,9 +30,14 @@ struct GUICommandPaletteResult {
 
 class GUICommandPalette {
 public:
-    GUICommandPalette(GUIContext context);
+    GUICommandPalette() {};
+    GUICommandPalette(App* app, GUIContext* context):
+        app(app),
+        context(context)
+    {};
     
-    GUIContext context;
+    App* app;
+    GUIContext* context;
     GUIFont font = GUIFont_Normal;
     bool showing = false;
     bool show_init = false;
@@ -43,9 +48,11 @@ public:
     std::vector<GUICommandPaletteCommand> commands;
     std::vector<GUICommandPaletteResult> results;
     
+    // 
+    void init();
     // Show the command palette if it is not shown already
     void show();
-    // Hide the command palette, if it is being shown
+    // Hide the command palette if it is being shown
     void hide();
     // Returns true if the command palette is currently visible
     bool is_showing();

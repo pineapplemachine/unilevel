@@ -1,5 +1,29 @@
 #include "controller.hpp"
 
+void InputAction_NoCallback(InputAction* action) {}
+
+void InputController::add_action(InputAction action) {
+    this->actions.push_back(action);
+}
+
+void InputController::add_action_key_bind(InputActionKeyBind bind) {
+    this->action_key_binds.push_back(bind);
+}
+
+void InputController::update() {
+    InputContext context = InputContext_General; // TODO
+    for(auto bind : this->action_key_binds) {
+        bool active = (
+            (bind.action->context & context) != 0 &&
+            this->is_key_state(bind.key_state, bind.key)
+        );
+        bind.action->active = active;
+        if(active) {
+            bind.action->active_callback(bind.action);
+        }
+    }
+}
+
 bool InputController::is_ctrl_key_down() {
     return (
         (this->ctrl_use_normal && (
@@ -62,15 +86,6 @@ bool InputController::is_key_down(InputModifiedKey modified_key) {
     );
 }
 
-bool InputController::is_key_down(InputKeyBind &key_bind) {
-    return (
-        this->is_key_down(key_bind.options[0]) ||
-        this->is_key_down(key_bind.options[1]) ||
-        this->is_key_down(key_bind.options[2]) ||
-        this->is_key_down(key_bind.options[3])
-    );
-}
-
 bool InputController::is_key_pressed(InputKey key) {
     ImGuiIO& io = ImGui::GetIO();
     if(io.WantCaptureKeyboard) {
@@ -83,15 +98,6 @@ bool InputController::is_key_pressed(InputModifiedKey modified_key) {
     return (
         this->is_modifier_key_down(modified_key.modifier) &&
         this->is_key_pressed(modified_key.key)
-    );
-}
-
-bool InputController::is_key_pressed(InputKeyBind &key_bind) {
-    return (
-        this->is_key_pressed(key_bind.options[0]) ||
-        this->is_key_pressed(key_bind.options[1]) ||
-        this->is_key_pressed(key_bind.options[2]) ||
-        this->is_key_pressed(key_bind.options[3])
     );
 }
 
@@ -110,19 +116,34 @@ bool InputController::is_key_released(InputModifiedKey modified_key) {
     );
 }
 
-bool InputController::is_key_released(InputKeyBind &key_bind) {
-    return (
-        this->is_key_released(key_bind.options[0]) ||
-        this->is_key_released(key_bind.options[1]) ||
-        this->is_key_released(key_bind.options[2]) ||
-        this->is_key_released(key_bind.options[3])
-    );
+bool InputController::is_key_state(
+    InputKeyState state, InputKey key
+) {
+    ImGuiIO& io = ImGui::GetIO();
+    if(io.WantCaptureKeyboard) {
+        return false;
+    }
+    switch(state) {
+        case InputKeyState_Down: {
+            return ImGui::IsKeyDown(key);
+        }
+        case InputKeyState_Pressed: {
+            return ImGui::IsKeyPressed(key);
+        }
+        case InputKeyState_Released: {
+            return ImGui::IsKeyReleased(key);
+        }
+        default: {
+            return false;
+        }
+    }
 }
 
-// TODO
-// bool InputController::update() {
-//     const int i_begin = ImGuiKey_NamedKey_BEGIN;
-//     const int i_end = ImGuiKey_NamedKey_END;
-//     for(int i = i_begin; i < i_end; ++i) {
-//     }
-// }
+bool InputController::is_key_state(
+    InputKeyState state, InputModifiedKey modified_key
+) {
+    return (
+        this->is_modifier_key_down(modified_key.modifier) &&
+        this->is_key_state(state, modified_key.key)
+    );
+}

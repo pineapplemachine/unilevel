@@ -6,10 +6,27 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 
+#include "app.hpp"
 #include "util/string.hpp"
 
-GUICommandPalette::GUICommandPalette(GUIContext context) {
-    this->context = context;
+void GUICommandPalette::init() {
+    this->app->input.add_action(InputAction{
+        "ui_command_palette_up",
+        InputContext_CommandPalette
+    });
+    this->app->input.add_action(InputAction{
+        "ui_command_palette_down",
+        InputContext_CommandPalette
+    });
+    this->app->input.add_action(InputAction{
+        "ui_command_palette_activate",
+        InputContext_CommandPalette
+    });
+    this->app->input.add_action(InputAction{
+        "ui_command_palette_escape",
+        InputContext_CommandPalette
+    });
+    // TODO: Don't hardcode keybinds
 }
 
 void GUICommandPalette::show() {
@@ -48,7 +65,7 @@ void GUICommandPalette::draw() {
         ImVec2(0.5f, 0.0f)
     );
     const auto font_size_px = (
-        this->context.get_font_size_px(this->font)
+        this->context->get_font_size_px(this->font)
     );
     const float size_width = ImMin(
         0.75f * viewport.x,
@@ -119,56 +136,6 @@ void GUICommandPalette::update() {
     ) {
         this->activate_result(
             this->results[this->pressed_result_index]
-        );
-    }
-}
-
-void GUICommandPalette::update_results() {
-    this->results.clear();
-    if(this->input_text[0] == 0 ||
-        this->input_text[IM_ARRAYSIZE(this->input_text) - 1] != 0
-    ) {
-        for(int i = 0; i < this->commands.size(); ++i) {
-            auto command = this->commands[i];
-            bool active = command.get_active_callback();
-            auto result = GUICommandPaletteResult{i, 0, active};
-            this->results.push_back(result);
-        }
-    }
-    else {
-        for(int i = 0; i < this->commands.size(); ++i) {
-            // TODO: also compare alias strings, in addition to title
-            auto command = this->commands[i];
-            bool active = command.get_active_callback();
-            auto input_str = std::string(this->input_text); // TODO: memory?
-            int sort_score = 0;
-            if(string_starts_with_insensitive(command.title, input_str)) {
-                bool exact = (command.title.size() == input_str.size());
-                sort_score = (exact ? -1 : 0);
-            }
-            else {
-                sort_score = string_sub_distance_insensitive(
-                    input_str, command.title
-                );
-            }
-            if(sort_score <= 1 + input_str.size()) {
-                if(!active) {
-                    sort_score += 1 + input_str.size();
-                }
-                auto result = GUICommandPaletteResult{i, sort_score, active};
-                this->results.push_back(result);
-            }
-        }
-        auto comparator = [](
-            const GUICommandPaletteResult& a,
-            const GUICommandPaletteResult& b
-        ) -> bool {
-            return a.sort_score < b.sort_score;
-        };
-        std::sort(
-            this->results.begin(),
-            this->results.end(),
-            comparator
         );
     }
 }
@@ -278,4 +245,54 @@ void GUICommandPalette::activate_result(GUICommandPaletteResult result) {
     GUICommandPaletteCommand& command = this->commands[result.command];
     this->hide();
     command.activated_callback();
+}
+
+void GUICommandPalette::update_results() {
+    this->results.clear();
+    if(this->input_text[0] == 0 ||
+        this->input_text[IM_ARRAYSIZE(this->input_text) - 1] != 0
+    ) {
+        for(int i = 0; i < this->commands.size(); ++i) {
+            auto command = this->commands[i];
+            bool active = command.get_active_callback();
+            auto result = GUICommandPaletteResult{i, 0, active};
+            this->results.push_back(result);
+        }
+    }
+    else {
+        for(int i = 0; i < this->commands.size(); ++i) {
+            // TODO: also compare alias strings, in addition to title
+            auto command = this->commands[i];
+            bool active = command.get_active_callback();
+            auto input_str = std::string(this->input_text); // TODO: memory?
+            int sort_score = 0;
+            if(string_starts_with_insensitive(command.title, input_str)) {
+                bool exact = (command.title.size() == input_str.size());
+                sort_score = (exact ? -1 : 0);
+            }
+            else {
+                sort_score = string_sub_distance_insensitive(
+                    input_str, command.title
+                );
+            }
+            if(sort_score <= 1 + input_str.size()) {
+                if(!active) {
+                    sort_score += 1 + input_str.size();
+                }
+                auto result = GUICommandPaletteResult{i, sort_score, active};
+                this->results.push_back(result);
+            }
+        }
+        auto comparator = [](
+            const GUICommandPaletteResult& a,
+            const GUICommandPaletteResult& b
+        ) -> bool {
+            return a.sort_score < b.sort_score;
+        };
+        std::sort(
+            this->results.begin(),
+            this->results.end(),
+            comparator
+        );
+    }
 }

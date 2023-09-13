@@ -1,10 +1,14 @@
 #pragma once
 
+#include "gui/command_palette.hpp"
 #include "gui/context.hpp"
+#include "input/controller.hpp"
 
 class App {
 public:
-    GUIContext context;
+    InputController input;
+    GUIContext gui_context;
+    GUICommandPalette gui_command_palette;
     
     App();
     

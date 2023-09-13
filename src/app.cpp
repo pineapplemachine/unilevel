@@ -6,7 +6,9 @@
 #include "imgui.h"
 
 App::App() {
-    this->context = GUIContext();
+    this->input = InputController(this);
+    this->gui_context = GUIContext(this);
+    this->gui_command_palette = GUICommandPalette(this, &this->gui_context);
 }
 
 void App::init() {
@@ -21,8 +23,9 @@ void App::init() {
     rlImGuiSetup(true);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags = ImGuiConfigFlags_NavNoCaptureKeyboard; // ?
-    // Load fonts
-    this->context.load();
+    // Initialize components
+    this->gui_context.init(); // Loads fonts
+    this->gui_command_palette.init();
 }
 
 bool App::done() {
@@ -30,11 +33,12 @@ bool App::done() {
 }
 
 void App::update() {
+    this->input.update();
     BeginDrawing();
     ClearBackground(Color{32, 24, 24});
     rlImGuiBegin();
     // imgui goes here
-    ImGui::PushFont(this->context.font_normal);
+    ImGui::PushFont(this->gui_context.font_normal);
     ImGui::TextColored(ImVec4(0.9, 0.9, 0.9, 1), "Hello world");
     ImGui::PopFont();
     rlImGuiEnd();

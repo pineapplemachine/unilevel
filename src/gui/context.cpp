@@ -3,11 +3,14 @@
 #include "imgui_freetype.h"
 #include "rlImGui.h"
 
-void GUIContext::load() {
-    this->load_fonts();
+#include "app.hpp"
+#include "input/controller.hpp"
+
+void GUIContext::init() {
+    this->init_fonts();
 }
 
-void GUIContext::load_fonts() {
+void GUIContext::init_fonts() {
     // TODO: don't hardcode font paths
     // looks good at 18px
     const auto font_path_regular = "assets/fonts/PublicSans/PublicSans-Regular.ttf";

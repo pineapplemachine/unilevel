@@ -2,6 +2,8 @@
 
 #include "imgui.h"
 
+class App; // Forward declaration for App from app.hpp
+
 typedef int GUIFontSize;
 enum GUIFontSize_ {
     GUIFontSize_None,
@@ -25,6 +27,10 @@ const GUIFont GUIFont_Big_Bold = GUIFont{GUIFontSize_Big, true};
 
 class GUIContext {
 public:
+    GUIContext() {};
+    GUIContext(App* app): app(app) {};
+    
+    App* app = nullptr;
     int font_small_size_px = 14;
     ImFont* font_small = nullptr;
     ImFont* font_small_bold = nullptr;
@@ -35,8 +41,8 @@ public:
     ImFont* font_big = nullptr;
     ImFont* font_big_bold = nullptr;
     
-    void load();
-    void load_fonts();
+    void init();
+    void init_fonts();
     int get_font_size_px(GUIFontSize size);
     int get_font_size_px(GUIFont font);
     ImFont* get_imgui_font(GUIFont font);
