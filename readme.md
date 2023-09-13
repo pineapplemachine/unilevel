@@ -6,9 +6,11 @@ This project is currently under construction.
 
 ## Compiling Unilevel from source
 
-First, ensure that you have [make](https://www.gnu.org/software/make/) and [Python 3](https://www.python.org/downloads/) installed.
+First, ensure that you have [make](https://www.gnu.org/software/make/), [GCC](https://gcc.gnu.org/) and [Python 3](https://www.python.org/downloads/) installed.
 
-With `make` and `python` binaries installed and available in your `PATH`, run this command in the Unilevel repository's root directory to automate downloading and building Unilevel's dependencies. (This may take a few minutes.)
+With `make`, `g++`, and `python` binaries installed and available in your `PATH`, you are ready to begin compiling Unilevel.
+
+In a CLI, run this command in the Unilevel repository's root directory to automate downloading and building Unilevel's dependencies. (This may take a few minutes.)
 
 ```
 python scripts/get_dependencies.py
@@ -20,7 +22,7 @@ Ensure that the [SConstruct](https://scons.org/doc/production/HTML/scons-user/ch
 python -m pip install scons
 ```
 
-Once `scons` is installed and Unilevel's dependencies have been made available, run this command in the repository's root directory to build Unilevel in release mode, writing a `unilevel` or `unilevel.exe` executable file to the same root directory:
+Once `scons` is installed and Unilevel's dependencies have been made available, run this command in the repository's root directory to build Unilevel in release mode, writing a `unilevel` or `unilevel.exe` executable file to the same root directory. (This may take a few minutes. Subsequent incremental builds will normally take less time to complete.)
 
 ```
 scons
