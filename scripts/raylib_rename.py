@@ -143,14 +143,13 @@ RE_API_FUNCTION_REPL = (
 )
 
 def __main__():
-    command = sys.argv[1]
-    raylib_dir = sys.argv[2]
+    command = sys.argv[1] if len(sys.argv) > 1 else None
     if not command or command in ("--help", "help", "usage"):
         print(help_text)
     elif command == "raylib":
-        main_raylib(raylib_dir)
+        main_raylib(sys.argv[2])
     elif command == "dep":
-        main_dep(raylib_dir, sys.argv[3:])
+        main_dep(sys.argv[2], sys.argv[3:])
 
 def main_raylib(raylib_dir_path):
     print("Adding prefixes to raylib declaration names in directory ", raylib_dir_path)
