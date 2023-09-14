@@ -13,10 +13,13 @@ imgui.ini
 
 .sconsign.dblite
 
-assets/fonts
+assets/fonts/**/*.*
+assets/fonts/**/README
+assets/fonts/**/LICENSE
 !assets/fonts/PublicSans/LICENSE.md
-!assets/fonts/PublicSans/OFL.md
+!assets/fonts/PublicSans/OFL.txt
 !assets/fonts/PublicSans/PublicSans-Regular.ttf
 !assets/fonts/PublicSans/PublicSans-Bold.ttf
 !assets/fonts/PublicSans/PublicSans-Italic.ttf
 !assets/fonts/PublicSans/PublicSans-BoldItalic.ttf
+
