@@ -29,13 +29,6 @@ python scripts/raylib_rename.py dep \
 ```
 """
 
-# TODO remove
-"""
-python scripts/raylib_rename.py raylib cached/raylib-4.5.0/raylib-4.5.0
-python scripts/raylib_rename.py dep cached/raylib-4.5.0/raylib-4.5.0 cached\rlImGui-af19e7de\rlImGui-af19e7de4736d3c2d237f1c225298d1d39c102ff\*.cpp
- 
-"""
-
 import argparse
 import glob
 import json
