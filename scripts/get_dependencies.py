@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import urllib.request
 
+import raylib_rename
+
 # Dependencies are downloaded and built in this directory
 WORKING_PATH = "cached"
 
@@ -30,7 +32,8 @@ PROJECT_RLIMGUI_INCLUDE_EXTRAS_PATH = "%s/extras" % PROJECT_RLIMGUI_INCLUDE_PATH
 RAYLIB_DOWNLOAD_URL = "https://github.com/raysan5/raylib/archive/refs/tags/%s.tar.gz" % RAYLIB_VERSION
 RAYLIB_ARCHIVE_PATH = "%s/raylib-%s.tar.gz" % (WORKING_PATH, RAYLIB_VERSION)
 RAYLIB_ARCHIVE_EXTRACT_PATH = "%s/raylib-%s" % (WORKING_PATH, RAYLIB_VERSION)
-RAYLIB_SRC_PATH = "%s/raylib-%s/src" % (RAYLIB_ARCHIVE_EXTRACT_PATH, RAYLIB_VERSION)
+RAYLIB_ROOT_PATH = "%s/raylib-%s" % (RAYLIB_ARCHIVE_EXTRACT_PATH, RAYLIB_VERSION)
+RAYLIB_SRC_PATH = "%s/src" % RAYLIB_ROOT_PATH
 RAYLIB_LIB_PATH = "%s/libraylib.a" % RAYLIB_SRC_PATH
 
 # Information about Dear ImGui dependency
@@ -136,11 +139,13 @@ def get_raylib():
     # Get raylib
     download_file(RAYLIB_ARCHIVE_PATH, RAYLIB_DOWNLOAD_URL)
     unpack_file(RAYLIB_ARCHIVE_PATH, RAYLIB_ARCHIVE_EXTRACT_PATH)
+    # Add "Raylib" or "RAYLIB_" prefix to declarations
+    raylib_rename.main_raylib(RAYLIB_ROOT_PATH)
     # Build raylib
     make_lib(
         RAYLIB_LIB_PATH,
         RAYLIB_SRC_PATH,
-        ["PLATFORM=PLATFORM_DESKTOP"],
+        ["PLATFORM=RAYLIB_PLATFORM_DESKTOP"],
     )
     # Copy raylib files to appropriate places
     copy_overwrite_file(RAYLIB_LIB_PATH, PROJECT_RAYLIB_LIB_PATH)
@@ -169,8 +174,16 @@ def get_imgui():
     
 def get_rlImGui():
     print("Downloading rlImGui %s" % RLIMGUI_VERSION_SHORT)
+    # Get rlImGui
     download_file(RLIMGUI_ARCHIVE_PATH, RLIMGUI_DOWNLOAD_URL)
     unpack_file(RLIMGUI_ARCHIVE_PATH, RLIMGUI_ARCHIVE_EXTRACT_PATH)
+    # Update code to account for newly prefixed raylib declarations
+    raylib_rename.main_dep(RAYLIB_ROOT_PATH, [
+        os.path.join(RLIMGUI_SRC_PATH, "rlImGui.cpp"),
+        os.path.join(RLIMGUI_SRC_PATH, "rlImGui.h"),
+        os.path.join(RLIMGUI_SRC_PATH, "rlImGuiColors.h"),
+    ])
+    # Copy rlImGui files to appropriate places
     copy_overwrite_dir_ext_files(
         RLIMGUI_SRC_PATH,
         PROJECT_RLIMGUI_INCLUDE_PATH,

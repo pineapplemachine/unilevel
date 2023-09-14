@@ -14,11 +14,11 @@ App::App() {
 void App::init() {
     // Raylib window setup
     // TODO: remember window size and position
-    InitWindow(1280, 720, "Unilevel");
-    SetWindowMinSize(640, 480);
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
-    SetExitKey(KEY_NULL);
-    SetTargetFPS(60); // TODO: make configurable
+    RaylibInitWindow(1280, 720, "Unilevel");
+    RaylibSetWindowMinSize(640, 480);
+    RaylibSetWindowState(RAYLIB_FLAG_WINDOW_RESIZABLE);
+    RaylibSetExitKey(RAYLIB_KEY_NULL);
+    RaylibSetTargetFPS(60); // TODO: make configurable
     // ImGui setup
     rlImGuiSetup(true);
     ImGuiIO& io = ImGui::GetIO();
@@ -29,25 +29,25 @@ void App::init() {
 }
 
 bool App::done() {
-    return WindowShouldClose();
+    return RaylibWindowShouldClose();
 }
 
 void App::update() {
     this->input.update();
-    BeginDrawing();
-    ClearBackground(Color{32, 24, 24});
+    RaylibBeginDrawing();
+    RaylibClearBackground(RaylibColor{32, 24, 24});
     rlImGuiBegin();
     // imgui goes here
     ImGui::PushFont(this->gui_context.font_normal);
     ImGui::TextColored(ImVec4(0.9, 0.9, 0.9, 1), "Hello world");
     ImGui::PopFont();
     rlImGuiEnd();
-    EndDrawing();
+    RaylibEndDrawing();
 }
 
 int App::conclude() {
     rlImGuiShutdown();
-    CloseWindow();
+    RaylibCloseWindow();
     return 0;
 }
 
