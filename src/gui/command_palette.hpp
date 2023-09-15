@@ -5,9 +5,10 @@
 #include <vector>
 
 #include "context.hpp"
+#include "input/controller.hpp"
 
 // TODO get and show keyboard shortcuts?
-// TODO array of aliases
+// TODO array of aliases for easier search
 struct GUICommandPaletteCommand {
     // Readable, uniquely identifying title for the command
     std::string title;
@@ -22,9 +23,13 @@ struct GUICommandPaletteCommand {
     std::function<void()> activated_callback;
 };
 
+// TODO: give better score to recently used commands
 struct GUICommandPaletteResult {
+    // Index of command in GUICommandPalette's commands list.
     int command;
+    // Lower score numbers appear higher in the results list.
     int sort_score;
+    // False for commands that are not available right now.
     bool active;
 };
 
@@ -47,6 +52,14 @@ public:
     char input_text[1024] = {};
     std::vector<GUICommandPaletteCommand> commands;
     std::vector<GUICommandPaletteResult> results;
+    
+    InputAction* action_show = nullptr;
+    InputAction* action_activate = nullptr;
+    InputAction* action_escape = nullptr;
+    InputAction* action_up = nullptr;
+    InputAction* action_down = nullptr;
+    InputAction* action_home = nullptr;
+    InputAction* action_end = nullptr;
     
     // 
     void init();

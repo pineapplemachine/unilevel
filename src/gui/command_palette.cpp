@@ -10,23 +10,75 @@
 #include "util/string.hpp"
 
 void GUICommandPalette::init() {
-    this->app->input.add_action(InputAction{
-        "ui_command_palette_up",
-        InputContext_CommandPalette
+    this->action_show = this->app->input.add_action(InputAction{
+        "ui_command_palette_show",
+        InputContext_General
     });
-    this->app->input.add_action(InputAction{
-        "ui_command_palette_down",
-        InputContext_CommandPalette
-    });
-    this->app->input.add_action(InputAction{
+    this->action_activate = this->app->input.add_action(InputAction{
         "ui_command_palette_activate",
         InputContext_CommandPalette
     });
-    this->app->input.add_action(InputAction{
+    this->action_escape = this->app->input.add_action(InputAction{
         "ui_command_palette_escape",
         InputContext_CommandPalette
     });
+    this->action_up = this->app->input.add_action(InputAction{
+        "ui_command_palette_up",
+        InputContext_CommandPalette
+    });
+    this->action_down = this->app->input.add_action(InputAction{
+        "ui_command_palette_down",
+        InputContext_CommandPalette
+    });
+    this->action_home = this->app->input.add_action(InputAction{
+        "ui_command_palette_home",
+        InputContext_CommandPalette
+    });
+    this->action_end = this->app->input.add_action(InputAction{
+        "ui_command_palette_end",
+        InputContext_CommandPalette
+    });
     // TODO: Don't hardcode keybinds
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Ctrl+Space"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_show
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Ctrl+Shift+P"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_show
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Enter"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_activate
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Escape"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_escape
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("UpArrow"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_up
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("DownArrow"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_down
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Ctrl+UpArrow"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_home
+    });
+    this->app->input.add_action_key_bind(InputActionKeyBind{
+        .key=InputModifiedKey_Parse("Ctrl+DownArrow"),
+        .key_state=InputKeyState_Pressed,
+        .action=this->action_end
+    });
 }
 
 void GUICommandPalette::show() {
@@ -40,11 +92,13 @@ void GUICommandPalette::show() {
     this->pressed_result_index = -1;
     this->input_text[0] = 0;
     this->update_results();
+    this->app->input.push_context(InputContext_CommandPalette);
 }
 
 void GUICommandPalette::hide() {
     this->showing = false;
     this->show_init = false;
+    this->app->input.pop_context(InputContext_CommandPalette);
 }
 
 bool GUICommandPalette::is_showing() {
@@ -127,9 +181,46 @@ void GUICommandPalette::draw() {
 }
 
 void GUICommandPalette::update() {
-    // TODO: arrow key and tab key selectable and clickable items
     if(!this->showing) {
+        if(this->action_show->active) {
+            this->show();
+        }
+        else {
+            return;
+        }
+    }
+    else if(this->action_escape->active) {
+        this->hide();
         return;
+    }
+    if(this->action_activate->active) {
+        if(this->selected_result_index > 0 &&
+            this->selected_result_index < this->results.size()
+        ) {
+            auto result = this->results[this->selected_result_index];
+            this->activate_result(result);
+        }
+        this->hide();
+        return;
+    }
+    else if(this->action_home->active) {
+        this->selected_result_index = 0;
+    }
+    else if(this->action_end->active) {
+        this->selected_result_index = ((int) this->results.size()) - 1;
+    }
+    else if(this->action_up->active) {
+        this->selected_result_index--;
+        if(this->selected_result_index < 0) {
+            this->selected_result_index = 0;
+        }
+    }
+    else if(this->action_down->active) {
+        int max_result_index = ((int) this->results.size()) - 1;
+        this->selected_result_index++;
+        if(this->selected_result_index > max_result_index) {
+            this->selected_result_index = max_result_index;
+        }
     }
     if(this->pressed_result_index > 0 &&
         this->pressed_result_index < this->results.size()
@@ -192,8 +283,8 @@ bool GUICommandPalette::draw_result(
     bool held = false;
     bool pressed = ImGui::ButtonBehavior(box, id, &hovered, &held, flags);
     const ImU32 fill_color = ImGui::GetColorU32(
-        (held && hovered) ? ImGuiCol_ButtonActive :
-        (hovered || selected) ? ImGuiCol_ButtonHovered :
+        (held && hovered && result.active) ? ImGuiCol_ButtonActive :
+        ((hovered && result.active) || selected) ? ImGuiCol_ButtonHovered :
         ImGuiCol_Button
     );
     window->DrawList->AddRectFilled(box.Min, box.Max, fill_color, 0.0f);
@@ -218,14 +309,36 @@ bool GUICommandPalette::draw_result(
     const ImVec2 title_label_size = ImGui::CalcTextSize(
         command.title.c_str(), nullptr, true
     );
-    ImGui::RenderTextClipped(
+    const ImU32 text_color = ImGui::GetColorU32(
+        result.active ? ImGuiCol_Text : ImGuiCol_TextDisabled
+    );
+    // void ImGui::RenderTextClipped(
+    //     const ImVec2& pos_min,
+    //     const ImVec2& pos_max,
+    //     const char* text,
+    //     const char* text_end,
+    //     const ImVec2* text_size_if_known,
+    //     const ImVec2& align,
+    //     const ImRect* clip_rect
+    // )
+    // ImGui::RenderTextClipped(
+    //     box.Min + style.FramePadding,
+    //     box.Max - style.FramePadding,
+    //     command.title.c_str(),
+    //     nullptr,
+    //     &title_label_size,
+    //     ImVec2(0.0f, 0.5f),
+    //     &box
+    // );
+    window->DrawList->AddText(
+        this->context->get_imgui_font(this->font),
+        (float) this->context->get_font_size_px(this->font),
         box.Min + style.FramePadding,
-        box.Max - style.FramePadding,
+        text_color,
         command.title.c_str(),
         nullptr,
-        &title_label_size,
-        ImVec2(0.0f, 0.5f),
-        &box
+        0.0f,
+        nullptr
     );
     if(hovered && command.summary.size() > 0) {
         ImGui::SetTooltip(command.summary.c_str());

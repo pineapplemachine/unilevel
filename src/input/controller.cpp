@@ -1,16 +1,17 @@
 #include "controller.hpp"
 
+#ifdef DEBUG
+#include <iostream>
+#endif
+
 void InputAction_NoCallback(InputAction* action) {}
 
-void InputController::add_action(InputAction action) {
-    this->actions.push_back(action);
-}
-
-void InputController::add_action_key_bind(InputActionKeyBind bind) {
-    this->action_key_binds.push_back(bind);
-}
-
 void InputController::update() {
+    #ifdef DEBUG
+    if(ImGui::IsKeyPressed((ImGuiKey) InputKey_X)) {
+        std::cout << "TEST";
+    }
+    #endif
     InputContext context = InputContext_General; // TODO
     for(auto bind : this->action_key_binds) {
         bool active = (
@@ -18,37 +19,72 @@ void InputController::update() {
             this->is_key_state(bind.key_state, bind.key)
         );
         bind.action->active = active;
+        #ifdef DEBUG
+        if(bind.key_state == InputKeyState_Pressed) {
+            std::cout << "Action activated by key press:";
+            std::cout << bind.action->name << "\n";
+        }
+        else if(bind.key_state == InputKeyState_Released) {
+            std::cout << "Action activated by key release:";
+            std::cout << bind.action->name << "\n";
+        }
+        else if(bind.key_state == InputKeyState_Down && this->is_key_pressed(bind.key)) {
+            std::cout << "Action activated by key down:";
+            std::cout << bind.action->name << "\n";
+        }
+        #endif
         if(active) {
             bind.action->active_callback(bind.action);
         }
     }
 }
 
+InputAction* InputController::add_action(InputAction action) {
+    this->actions.push_back(action);
+    return &this->actions.back();
+}
+
+InputActionKeyBind* InputController::add_action_key_bind(
+    InputActionKeyBind bind
+) {
+    this->action_key_binds.push_back(bind);
+    return &this->action_key_binds.back();
+}
+
+InputContext InputController::get_current_context() {
+    if(this->context_stack.size() <= 0) {
+        return InputContext_None;
+    }
+    else {
+        return this->context_stack.back();
+    }
+}
+
+void InputController::push_context(InputContext context) {
+    this->context_stack.push_back(context);
+}
+
+void InputController::pop_context(InputContext context) {
+    if(this->context_stack.size() > 0 &&
+        this->context_stack.back() == context
+    ) {
+        this->context_stack.pop_back();
+    }
+}
+
 bool InputController::is_ctrl_key_down() {
     return (
-        (this->ctrl_use_normal && (
-            ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) ||
-            ImGui::IsKeyPressed(ImGuiKey_RightCtrl)
-        )) ||
-        (this->ctrl_use_super && (
-            ImGui::IsKeyPressed(ImGuiKey_LeftSuper) ||
-            ImGui::IsKeyPressed(ImGuiKey_RightSuper)
-        ))
+        (this->ctrl_use_normal && ImGui::IsKeyDown(ImGuiMod_Ctrl)) ||
+        (this->ctrl_use_super && ImGui::IsKeyDown(ImGuiMod_Super))
     );
 }
 
 bool InputController::is_shift_key_down() {
-    return (
-        ImGui::IsKeyPressed(ImGuiKey_LeftShift) ||
-        ImGui::IsKeyPressed(ImGuiKey_RightShift)
-    );
+    return ImGui::IsKeyDown(ImGuiMod_Shift);
 }
 
 bool InputController::is_alt_key_down() {
-    return (
-        ImGui::IsKeyPressed(ImGuiKey_LeftAlt) ||
-        ImGui::IsKeyPressed(ImGuiKey_RightAlt)
-    );
+    return ImGui::IsKeyDown(ImGuiMod_Alt);
 }
 
 bool InputController::is_modifier_key_down(InputModifierKey modifier) {
@@ -76,7 +112,7 @@ bool InputController::is_key_down(InputKey key) {
     if(io.WantCaptureKeyboard) {
         return false;
     }
-    return ImGui::IsKeyDown(key);
+    return ImGui::IsKeyDown((ImGuiKey) key);
 }
 
 bool InputController::is_key_down(InputModifiedKey modified_key) {
@@ -91,7 +127,7 @@ bool InputController::is_key_pressed(InputKey key) {
     if(io.WantCaptureKeyboard) {
         return false;
     }
-    return ImGui::IsKeyPressed(key);
+    return ImGui::IsKeyPressed((ImGuiKey) key);
 }
 
 bool InputController::is_key_pressed(InputModifiedKey modified_key) {
@@ -106,7 +142,7 @@ bool InputController::is_key_released(InputKey key) {
     if(io.WantCaptureKeyboard) {
         return false;
     }
-    return ImGui::IsKeyReleased(key);
+    return ImGui::IsKeyReleased((ImGuiKey) key);
 }
 
 bool InputController::is_key_released(InputModifiedKey modified_key) {
@@ -125,13 +161,13 @@ bool InputController::is_key_state(
     }
     switch(state) {
         case InputKeyState_Down: {
-            return ImGui::IsKeyDown(key);
+            return ImGui::IsKeyDown((ImGuiKey) key);
         }
         case InputKeyState_Pressed: {
-            return ImGui::IsKeyPressed(key);
+            return ImGui::IsKeyPressed((ImGuiKey) key);
         }
         case InputKeyState_Released: {
-            return ImGui::IsKeyReleased(key);
+            return ImGui::IsKeyReleased((ImGuiKey) key);
         }
         default: {
             return false;
