@@ -9,7 +9,6 @@
 App app;
 
 int main(int argc, char **argv) {
-    std::cout << "Hello world";
     app = App();
     return app.main();
 }

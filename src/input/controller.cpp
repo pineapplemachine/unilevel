@@ -9,46 +9,96 @@ void InputAction_NoCallback(InputAction* action) {}
 void InputController::update() {
     #ifdef DEBUG
     if(ImGui::IsKeyPressed((ImGuiKey) InputKey_X)) {
-        std::cout << "TEST";
+        std::cout << "This ptr: " << (long long int) this << "\n";
+        std::cout << "App ptr: " << (long long int) this->app << "\n";
+        std::cout << "Actions: " << this->actions.size() << "\n";
+        std::cout << "Keybinds: " << this->action_key_binds.size() << "\n";
     }
     #endif
     InputContext context = InputContext_General; // TODO
-    for(auto bind : this->action_key_binds) {
+    // for(auto bind : this->action_key_binds) {
+    for(int i = 0; i < this->action_key_binds.size(); ++i) {
+        auto bind = this->action_key_binds[i];
+        #ifdef DEBUG
+        if(ImGui::IsKeyDown((ImGuiKey) InputKey_Z)) {
+            std::cout << "? " << this->get_action_name(bind.action).c_str() << "\n";
+        }
+        #endif
         bool active = (
-            (bind.action->context & context) != 0 &&
+            // (bind.action->context & context) != 0 &&
             this->is_key_state(bind.key_state, bind.key)
         );
-        bind.action->active = active;
+        this->set_action_active(bind.action, active);
         #ifdef DEBUG
         if(bind.key_state == InputKeyState_Pressed) {
             std::cout << "Action activated by key press:";
-            std::cout << bind.action->name << "\n";
+            std::cout << this->get_action_name(bind.action).c_str() << "\n";
         }
         else if(bind.key_state == InputKeyState_Released) {
             std::cout << "Action activated by key release:";
-            std::cout << bind.action->name << "\n";
+            std::cout << this->get_action_name(bind.action).c_str() << "\n";
         }
         else if(bind.key_state == InputKeyState_Down && this->is_key_pressed(bind.key)) {
             std::cout << "Action activated by key down:";
-            std::cout << bind.action->name << "\n";
+            std::cout << this->get_action_name(bind.action).c_str() << "\n";
         }
         #endif
-        if(active) {
-            bind.action->active_callback(bind.action);
-        }
     }
 }
 
-InputAction* InputController::add_action(InputAction action) {
+InputActionHandle InputController::add_action(InputAction action) {
+    auto handle = this->actions.size();
     this->actions.push_back(action);
-    return &this->actions.back();
+    return (InputActionHandle) handle;
 }
 
-InputActionKeyBind* InputController::add_action_key_bind(
+InputActionKeyBindHandle InputController::add_action_key_bind(
     InputActionKeyBind bind
 ) {
+    auto handle = this->action_key_binds.size();
     this->action_key_binds.push_back(bind);
-    return &this->action_key_binds.back();
+    #ifdef DEBUG
+    std::cout << "This ptr: " << (long long int) this << "\n";
+    std::cout << "App ptr: " << (long long int) this->app << "\n";
+    std::cout << "Added a keybind. Total: " << this->action_key_binds.size() << "\n";
+    #endif
+    return (InputActionKeyBindHandle) handle;
+}
+
+InputAction* InputController::get_action(
+    InputActionHandle handle
+) {
+    return &this->actions.at(handle);
+}
+
+std::string InputController::get_action_name(
+    InputActionHandle handle
+) {
+    return this->actions.at(handle).name;
+}
+
+InputContext InputController::get_action_context(
+    InputActionHandle handle
+) {
+    return this->actions.at(handle).context;
+}
+
+InputActionKeyBind* InputController::get_action_key_bind(
+    InputActionKeyBindHandle handle
+) {
+    return &this->action_key_binds.at(handle);
+}
+
+bool InputController::is_action_active(InputActionHandle handle) {
+    return this->actions.at(handle).active;
+}
+
+void InputController::set_action_active(InputActionHandle handle, bool active) {
+    auto action = &this->actions.at(handle);
+    action->active = active;
+    if(action) {
+        action->active_callback(action);
+    }
 }
 
 InputContext InputController::get_current_context() {
@@ -156,6 +206,7 @@ bool InputController::is_key_state(
     InputKeyState state, InputKey key
 ) {
     ImGuiIO& io = ImGui::GetIO();
+    // TODO: make toggleable depending on action/keybind?
     if(io.WantCaptureKeyboard) {
         return false;
     }

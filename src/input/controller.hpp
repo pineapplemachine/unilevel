@@ -49,11 +49,17 @@ struct InputAction {
     bool active = false;
 };
 
+typedef int InputActionHandle;
+const InputActionHandle InputActionHandle_None = -1;
+
 struct InputActionKeyBind {
     InputModifiedKey key;
     InputKeyState key_state;
-    InputAction* action;
+    InputActionHandle action;
 };
+
+typedef int InputActionKeyBindHandle;
+const InputActionKeyBindHandle InputActionKeyBindHandle_None = -1;
 
 class InputController {
 public:
@@ -78,9 +84,14 @@ public:
     // of the application's main loop.
     void update();
     
-    InputAction* add_action(InputAction action);
-    InputActionKeyBind* add_action_key_bind(InputActionKeyBind bind);
-    InputActionKeyBind* add_action_key_bind(InputAction* action, std::string bind);
+    InputActionHandle add_action(InputAction action);
+    InputActionKeyBindHandle add_action_key_bind(InputActionKeyBind bind);
+    InputAction* get_action(InputActionHandle handle);
+    std::string get_action_name(InputActionHandle handle);
+    InputContext get_action_context(InputActionHandle handle);
+    InputActionKeyBind* get_action_key_bind(InputActionKeyBindHandle handle);
+    bool is_action_active(InputActionHandle handle);
+    void set_action_active(InputActionHandle handle, bool active);
     
     InputContext get_current_context();
     void push_context(InputContext context);

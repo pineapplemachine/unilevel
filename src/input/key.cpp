@@ -1,5 +1,9 @@
 #include "key.hpp"
 
+#ifdef DEBUG
+#include <iostream>
+#endif
+
 const char* InputKey_GetName(InputKey key) {
     if(key == InputKey_None) {
         return InputKey_None_Name;
@@ -54,5 +58,9 @@ InputModifiedKey InputModifiedKey_Parse(std::string text) {
     }
     auto key_name = text.substr(i_begin, i - i_begin);
     InputKey key = InputKey_GetFromName(key_name);
+    #ifdef DEBUG
+    std::cout << "Parsed modified key:" << text.c_str() << "\n";
+    std::cout << "Result:" << modifier << " + " << key << "\n";
+    #endif
     return InputModifiedKey{key, (InputModifierKey) modifier};
 }

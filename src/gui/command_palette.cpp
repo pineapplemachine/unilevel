@@ -178,22 +178,23 @@ void GUICommandPalette::draw() {
         }
     }
     ImGui::EndChild();
+    ImGui::End();
 }
 
 void GUICommandPalette::update() {
     if(!this->showing) {
-        if(this->action_show->active) {
+        if(this->app->input.is_action_active(this->action_show)) {
             this->show();
         }
         else {
             return;
         }
     }
-    else if(this->action_escape->active) {
+    else if(this->app->input.is_action_active(this->action_escape)) {
         this->hide();
         return;
     }
-    if(this->action_activate->active) {
+    if(this->app->input.is_action_active(this->action_activate)) {
         if(this->selected_result_index > 0 &&
             this->selected_result_index < this->results.size()
         ) {
@@ -203,19 +204,19 @@ void GUICommandPalette::update() {
         this->hide();
         return;
     }
-    else if(this->action_home->active) {
+    else if(this->app->input.is_action_active(this->action_home)) {
         this->selected_result_index = 0;
     }
-    else if(this->action_end->active) {
+    else if(this->app->input.is_action_active(this->action_end)) {
         this->selected_result_index = ((int) this->results.size()) - 1;
     }
-    else if(this->action_up->active) {
+    else if(this->app->input.is_action_active(this->action_up)) {
         this->selected_result_index--;
         if(this->selected_result_index < 0) {
             this->selected_result_index = 0;
         }
     }
-    else if(this->action_down->active) {
+    else if(this->app->input.is_action_active(this->action_down)) {
         int max_result_index = ((int) this->results.size()) - 1;
         this->selected_result_index++;
         if(this->selected_result_index > max_result_index) {

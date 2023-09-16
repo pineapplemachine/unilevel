@@ -53,13 +53,13 @@ public:
     std::vector<GUICommandPaletteCommand> commands;
     std::vector<GUICommandPaletteResult> results;
     
-    InputAction* action_show = nullptr;
-    InputAction* action_activate = nullptr;
-    InputAction* action_escape = nullptr;
-    InputAction* action_up = nullptr;
-    InputAction* action_down = nullptr;
-    InputAction* action_home = nullptr;
-    InputAction* action_end = nullptr;
+    InputActionHandle action_show = InputActionHandle_None;
+    InputActionHandle action_activate = InputActionHandle_None;
+    InputActionHandle action_escape = InputActionHandle_None;
+    InputActionHandle action_up = InputActionHandle_None;
+    InputActionHandle action_down = InputActionHandle_None;
+    InputActionHandle action_home = InputActionHandle_None;
+    InputActionHandle action_end = InputActionHandle_None;
     
     // 
     void init();
