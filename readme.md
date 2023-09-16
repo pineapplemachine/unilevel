@@ -6,11 +6,11 @@ This project is currently under construction.
 
 ## Compiling Unilevel from source
 
-First, ensure that you have [make](https://www.gnu.org/software/make/), [GCC](https://gcc.gnu.org/) and [Python 3](https://www.python.org/downloads/) installed.
+First, ensure that you have [make](https://www.gnu.org/software/make/), [cmake](https://cmake.org/), [GCC](https://gcc.gnu.org/) and [Python 3](https://www.python.org/downloads/) installed.
 
-With `make`, `g++`, and `python` binaries installed and available in your `PATH`, you are ready to begin compiling Unilevel.
+With `make`, `cmake`, `g++`, and `python` binaries installed and available in your `PATH`, you are ready to begin compiling Unilevel.
 
-In a CLI, run this command in the Unilevel repository's root directory to automate downloading and building Unilevel's dependencies. (This may take a few minutes.)
+In a CLI, run this command in the Unilevel repository's root directory. It will attempt to fully automate downloading and building Unilevel's dependencies. (This may take a few minutes.)
 
 ```
 python scripts/get_dependencies.py

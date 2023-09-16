@@ -16,11 +16,14 @@ IMGUI_VERSION = "1.89.9"
 RLIMGUI_VERSION = "af19e7de4736d3c2d237f1c225298d1d39c102ff"
 # Version for Freetype
 FREETYPE_VERSION = "2.13.2"
+# Version for spdlog
+SPDLOG_VERSION = "1.12.0"
 
 # Files are copied from dependencies to these locations
 PROJECT_LIB_PATH = "lib"
 PROJECT_RAYLIB_LIB_PATH = "%s/libraylib.a" % PROJECT_LIB_PATH
 PROJECT_FREETYPE_LIB_PATH = "%s/libfreetype.a" % PROJECT_LIB_PATH
+PROJECT_SPDLOG_LIB_PATH = "%s/spdlog.lib" % PROJECT_LIB_PATH
 PROJECT_INCLUDE_PATH = "include"
 PROJECT_RAYLIB_INCLUDE_PATH = "%s/raylib" % PROJECT_INCLUDE_PATH
 PROJECT_IMGUI_INCLUDE_PATH = "%s/imgui" % PROJECT_INCLUDE_PATH
@@ -59,12 +62,22 @@ FREETYPE_SRC_PATH = "%s/freetype-%s" % (FREETYPE_ARCHIVE_EXTRACT_PATH, FREETYPE_
 FREETYPE_SRC_INCLUDE_PATH = "%s/include" % FREETYPE_SRC_PATH
 FREETYPE_LIB_PATH = "%s/freetype-%s/objs/libfreetype.a" % (FREETYPE_ARCHIVE_EXTRACT_PATH, FREETYPE_VERSION)
 
+# Information about spdlog dependency
+SPDLOG_DOWNLOAD_URL = "https://github.com/gabime/spdlog/archive/refs/tags/v%s.tar.gz" % SPDLOG_VERSION
+SPDLOG_ARCHIVE_PATH = "%s/spdlog-%s.tar.gz" % (WORKING_PATH, SPDLOG_VERSION)
+SPDLOG_ARCHIVE_EXTRACT_PATH = "%s/spdlog-%s" % (WORKING_PATH, SPDLOG_VERSION)
+SPDLOG_SRC_PATH = "%s/spdlog-%s" % (SPDLOG_ARCHIVE_EXTRACT_PATH, SPDLOG_VERSION)
+SPDLOG_SRC_BUILD_PATH = "%s/build" % SPDLOG_SRC_PATH
+SPDLOG_LIB_PATH = "%s/Release/spdlog.lib" % SPDLOG_SRC_BUILD_PATH # TODO: what about not on windows?
+SPDLOG_SRC_INCLUDE_PATH = "%s/include" % SPDLOG_SRC_PATH
+
 def main():
     print("Getting Unilevel dependencies.")
     get_raylib()
     get_imgui()
     get_rlImGui()
     get_freetype()
+    get_spdlog()
     print("Done: All dependencies are ready.")
 
 def download_file(output_path, url):
@@ -121,14 +134,15 @@ def copy_overwrite_dir_ext_files(
                 dst_file_path = os.path.join(dst_dir_path, src_file_name)
                 copy_overwrite_file(src_file_path, dst_file_path)
 
-def make_lib(lib_path, make_path, make_args=[]):
+def make_lib(lib_path, make_path, make_commands=["make"]):
     if os.path.exists(lib_path):
         print("Found lib file already built: %s" % lib_path)
     else:
         print("Building lib %s from source" % lib_path)
-        for args in make_args:
+        for command in make_commands:
+            print("$", command)
             make_process = subprocess.Popen(
-                "make " + args if args else "make",
+                command,
                 cwd=make_path,
                 shell=True,
             )
@@ -142,11 +156,9 @@ def get_raylib():
     # Add "Raylib" or "RAYLIB_" prefix to declarations
     raylib_rename.main_raylib(RAYLIB_ROOT_PATH)
     # Build raylib
-    make_lib(
-        RAYLIB_LIB_PATH,
-        RAYLIB_SRC_PATH,
-        ["PLATFORM=RAYLIB_PLATFORM_DESKTOP"],
-    )
+    make_lib(RAYLIB_LIB_PATH, RAYLIB_SRC_PATH, [
+        "make PLATFORM=RAYLIB_PLATFORM_DESKTOP",
+    ])
     # Copy raylib files to appropriate places
     copy_overwrite_file(RAYLIB_LIB_PATH, PROJECT_RAYLIB_LIB_PATH)
     copy_overwrite_dir_ext_files(
@@ -202,11 +214,10 @@ def get_freetype():
     download_file(FREETYPE_ARCHIVE_PATH, FREETYPE_DOWNLOAD_URL)
     unpack_file(FREETYPE_ARCHIVE_PATH, FREETYPE_ARCHIVE_EXTRACT_PATH)
     # Build freetype
-    make_lib(
-        FREETYPE_LIB_PATH,
-        FREETYPE_SRC_PATH,
-        ["setup ansi", ""],
-    )
+    make_lib(FREETYPE_LIB_PATH, FREETYPE_SRC_PATH, [
+        "make setup ansi",
+        "make",
+    ])
     # Copy freetype files to appropriate places
     copy_overwrite_file(FREETYPE_LIB_PATH, PROJECT_FREETYPE_LIB_PATH)
     copy_overwrite_dir_ext_files(
@@ -216,6 +227,24 @@ def get_freetype():
         recursive=True,
     )
     print("Done: freetype %s is ready." % FREETYPE_VERSION)
+
+def get_spdlog():
+    print("Downloading and building spdlog %s" % SPDLOG_VERSION)
+    download_file(SPDLOG_ARCHIVE_PATH, SPDLOG_DOWNLOAD_URL)
+    unpack_file(SPDLOG_ARCHIVE_PATH, SPDLOG_ARCHIVE_EXTRACT_PATH)
+    os.makedirs(SPDLOG_SRC_BUILD_PATH, exist_ok=True)
+    make_lib(SPDLOG_LIB_PATH, SPDLOG_SRC_BUILD_PATH, [
+        "cmake ..",
+        "cmake --build . --config Release",
+    ])
+    copy_overwrite_file(SPDLOG_LIB_PATH, PROJECT_SPDLOG_LIB_PATH)
+    copy_overwrite_dir_ext_files(
+        SPDLOG_SRC_INCLUDE_PATH,
+        PROJECT_INCLUDE_PATH,
+        [".h"],
+        recursive=True,
+    )
+    print("Done: spdlog %s is ready." % SPDLOG_VERSION)
 
 if __name__ == "__main__":
     main()

@@ -12,14 +12,23 @@ binary_name = "unilevel"
 binary_dir = build_mode
 
 if sys.platform.startswith("linux"):
-    cpp_platform = "LINUX_64"
-    cpp_libs = "raylib freetype GL m pthread dl rt X11"
+    cpp_platform = "PLATFORM_LINUX"
+    cpp_libs = "raylib freetype spdlog GL m pthread dl rt X11"
     cpp_tools = ["default", "g++"]
 elif sys.platform.startswith("win"):
-    cpp_platform = "WINDOWS_64"
-    cpp_libs = "raylib freetype opengl32 gdi32 winmm"
+    cpp_platform = "PLATFORM_WINDOWS"
+    cpp_libs = "raylib freetype spdlog opengl32 gdi32 winmm"
     cpp_tools = ["mingw", "g++"]
     binary_ext = ".exe"
+elif sys.platform.startswith("darwin"):
+    cpp_platform = "PLATFORM_DARWIN"
+    cpp_libs = "raylib freetype spdlog GL m pthread dl rt X11"
+    cpp_tools = ["default", "g++"]
+else:
+    raise ValueError(
+        "Build script does not yet support this platform: %s" %
+        sys.platform
+    )
 
 env = Environment(
     tools = cpp_tools,
