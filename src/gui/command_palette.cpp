@@ -8,6 +8,7 @@
 
 #include "app.hpp"
 #include "util/string.hpp"
+#include "gui/imgui_util.hpp"
 
 void GUICommandPalette::init() {
     this->action_show = this->app->input.add_action(InputAction{
@@ -318,7 +319,7 @@ bool GUICommandPalette::draw_result(
         nullptr
     );
     if(hovered && command.summary.size() > 0) {
-        ImGui::SetTooltip(command.summary.c_str());
+        ImGuiUtil::SetTooltipUnformatted(command.summary.c_str());
     }
     if(hovered) {
         this->hovered_result_index = result_index;
