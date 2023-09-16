@@ -40,15 +40,26 @@ env = Environment(
     CPPDEFINES = [
         cpp_platform,
         "IMGUI_DEFINE_MATH_OPERATORS",
-        "IMGUI_ENABLE_FREETYPE", # ?
+        "IMGUI_ENABLE_FREETYPE",
     ],
     LIBS = Split(cpp_libs),
 )
 
 if build_mode == "debug":
-    env.Append(CPPFLAGS=["-g"], CPPDEFINES="DEBUG")
+    env.Append(
+        CPPDEFINES="DEBUG",
+        CPPFLAGS=[
+            "-g",
+            "-fsanitize=undefined",
+            "-fsanitize-trap"
+            # https://stackoverflow.com/questions/6404636/libstdc-6-dll-not-found
+            # "-static-libgcc",
+            # "-static-libstdc++",
+        ],
+    )
     binary_name += "_debug"
 elif build_mode == "fast":
+    env.Append(CPPFLAGS=["-O0"])
     binary_name += "_fast"
 elif build_mode == "release":
     env.Append(CPPFLAGS=["-O2"])
