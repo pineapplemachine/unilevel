@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import urllib.request
 
 import raylib_rename
@@ -19,11 +20,15 @@ FREETYPE_VERSION = "2.13.2"
 # Version for spdlog
 SPDLOG_VERSION = "1.12.0"
 
+PROJECT_SPDLOG_LIB_NAME = (
+    "spdlog.lib" if sys.platform.startswith("win") else "libspdlog.a"
+)
+
 # Files are copied from dependencies to these locations
 PROJECT_LIB_PATH = "lib"
 PROJECT_RAYLIB_LIB_PATH = "%s/libraylib.a" % PROJECT_LIB_PATH
 PROJECT_FREETYPE_LIB_PATH = "%s/libfreetype.a" % PROJECT_LIB_PATH
-PROJECT_SPDLOG_LIB_PATH = "%s/spdlog.lib" % PROJECT_LIB_PATH
+PROJECT_SPDLOG_LIB_PATH = "%s/%s" % (PROJECT_LIB_PATH, PROJECT_SPDLOG_LIB_NAME)
 PROJECT_INCLUDE_PATH = "include"
 PROJECT_RAYLIB_INCLUDE_PATH = "%s/raylib" % PROJECT_INCLUDE_PATH
 PROJECT_IMGUI_INCLUDE_PATH = "%s/imgui" % PROJECT_INCLUDE_PATH
@@ -67,9 +72,13 @@ SPDLOG_DOWNLOAD_URL = "https://github.com/gabime/spdlog/archive/refs/tags/v%s.ta
 SPDLOG_ARCHIVE_PATH = "%s/spdlog-%s.tar.gz" % (WORKING_PATH, SPDLOG_VERSION)
 SPDLOG_ARCHIVE_EXTRACT_PATH = "%s/spdlog-%s" % (WORKING_PATH, SPDLOG_VERSION)
 SPDLOG_SRC_PATH = "%s/spdlog-%s" % (SPDLOG_ARCHIVE_EXTRACT_PATH, SPDLOG_VERSION)
-SPDLOG_SRC_BUILD_PATH = "%s/build" % SPDLOG_SRC_PATH
-SPDLOG_LIB_PATH = "%s/Release/spdlog.lib" % SPDLOG_SRC_BUILD_PATH # TODO: what about not on windows?
 SPDLOG_SRC_INCLUDE_PATH = "%s/include" % SPDLOG_SRC_PATH
+SPDLOG_SRC_BUILD_PATH = "%s/build" % SPDLOG_SRC_PATH
+SPDLOG_LIB_PATH = (
+    "%s/Release/%s" % (SPDLOG_SRC_BUILD_PATH, PROJECT_SPDLOG_LIB_NAME)
+    if sys.platform.startswith("win") else
+    "%s/%s" % (SPDLOG_SRC_BUILD_PATH, PROJECT_SPDLOG_LIB_NAME)
+)
 
 def main():
     print("Getting Unilevel dependencies.")
