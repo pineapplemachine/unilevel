@@ -32,8 +32,9 @@ void InputController::update() {
         action.active = false;
     }
     for(auto bind : this->action_key_binds) {
+        auto action_context = this->get_action_context(bind.action);
         bool active = (
-            (bind.action->context & context) != 0 &&
+            (action_context & context) != 0 &&
             this->is_key_state(bind.key_state, bind.key)
         );
         if(active) {
