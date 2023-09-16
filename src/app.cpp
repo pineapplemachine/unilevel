@@ -4,6 +4,7 @@
 #include "raymath.h"
 #include "rlImGui.h"
 #include "imgui.h"
+#include "spdlog/spdlog.h"
 
 App::App() {
     this->input = InputController(this);
@@ -12,12 +13,14 @@ App::App() {
 }
 
 void App::init() {
+    // TODO: make configurable
+    spdlog::set_level(spdlog::level::trace);
     // Raylib window setup
     // TODO: remember window size and position
     RaylibInitWindow(1280, 720, "Unilevel");
     RaylibSetWindowMinSize(640, 480);
     RaylibSetWindowState(RAYLIB_FLAG_WINDOW_RESIZABLE);
-    // RaylibSetExitKey(RAYLIB_KEY_NULL); // TODO uncomment
+    RaylibSetExitKey(RAYLIB_KEY_NULL); // TODO uncomment
     RaylibSetTargetFPS(60); // TODO: make configurable
     // ImGui setup
     rlImGuiSetup(true);
@@ -33,11 +36,11 @@ bool App::done() {
 }
 
 void App::update() {
+    RaylibBeginDrawing();
+    rlImGuiBegin();
     this->input.update();
     this->gui_command_palette.update();
-    RaylibBeginDrawing();
     RaylibClearBackground(RaylibColor{32, 24, 24});
-    rlImGuiBegin();
     ImGui::PushFont(this->gui_context.font_normal);
     ImGui::TextColored(
         ImVec4(RaylibIsKeyDown(RAYLIB_KEY_TAB) ? 0.1 : 0.9, 0.9, 0.9, 1),

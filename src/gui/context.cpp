@@ -80,13 +80,13 @@ int GUIContext::get_font_size_px(GUIFont font) {
 ImFont* GUIContext::get_imgui_font(GUIFont font) {
     switch(font.size) {
         case GUIFontSize_Small: {
-            return font.bold ? this->font_small : this->font_small_bold;
+            return font.bold ? this->font_small_bold : this->font_small;
         }
         case GUIFontSize_Normal: {
-            return font.bold ? this->font_normal : this->font_normal_bold;
+            return font.bold ? this->font_normal_bold : this->font_normal;
         }
         case GUIFontSize_Big: {
-            return font.bold ? this->font_big : this->font_big_bold;
+            return font.bold ? this->font_big_bold : this->font_big;
         }
         default: {
             return nullptr;

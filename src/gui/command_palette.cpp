@@ -39,46 +39,30 @@ void GUICommandPalette::init() {
         InputContext_CommandPalette
     });
     // TODO: Don't hardcode keybinds
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Ctrl+Space"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_show
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Ctrl+Shift+P"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_show
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Enter"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_activate
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Escape"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_escape
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("UpArrow"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_up
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("DownArrow"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_down
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Ctrl+UpArrow"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_home
-    });
-    this->app->input.add_action_key_bind(InputActionKeyBind{
-        .key=InputModifiedKey_Parse("Ctrl+DownArrow"),
-        .key_state=InputKeyState_Pressed,
-        .action=this->action_end
-    });
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_show, "Ctrl+Space")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_show, "Ctrl+Shift+P")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_activate, "Enter")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_escape, "Escape")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_up, "UpArrow")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_down, "DownArrow")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_home, "Ctrl+UpArrow")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_end, "Ctrl+DownArrow")
+    );
 }
 
 void GUICommandPalette::show() {
@@ -127,6 +111,8 @@ void GUICommandPalette::draw() {
     );
     const ImVec2 window_size = ImVec2(size_width, 0.0f);
     ImGui::SetNextWindowSize(window_size);
+    auto im_font = this->context->get_imgui_font(this->font);
+    ImGui::PushFont(im_font);
     bool visible = ImGui::Begin(
         "Command Palette",
         nullptr,
@@ -177,6 +163,14 @@ void GUICommandPalette::draw() {
             this->pressed_result_index = i;
         }
     }
+    if(this->results.size() == 0) {
+        // TODO: Why doesn't this show?
+        ImGui::TextColored(
+            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled),
+            "No matching commands."
+        );
+    }
+    ImGui::PopFont();
     ImGui::EndChild();
     ImGui::End();
 }
@@ -313,24 +307,6 @@ bool GUICommandPalette::draw_result(
     const ImU32 text_color = ImGui::GetColorU32(
         result.active ? ImGuiCol_Text : ImGuiCol_TextDisabled
     );
-    // void ImGui::RenderTextClipped(
-    //     const ImVec2& pos_min,
-    //     const ImVec2& pos_max,
-    //     const char* text,
-    //     const char* text_end,
-    //     const ImVec2* text_size_if_known,
-    //     const ImVec2& align,
-    //     const ImRect* clip_rect
-    // )
-    // ImGui::RenderTextClipped(
-    //     box.Min + style.FramePadding,
-    //     box.Max - style.FramePadding,
-    //     command.title.c_str(),
-    //     nullptr,
-    //     &title_label_size,
-    //     ImVec2(0.0f, 0.5f),
-    //     &box
-    // );
     window->DrawList->AddText(
         this->context->get_imgui_font(this->font),
         (float) this->context->get_font_size_px(this->font),

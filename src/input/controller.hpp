@@ -10,14 +10,12 @@
 
 class App; // Forward declaration for App from app.hpp
 
-enum InputKeyState : int {
-    InputKeyState_None = 0,
-    InputKeyState_Down = 1,
-    InputKeyState_Pressed = 2,
-    InputKeyState_Released = 3,
-    InputKeyState_COUNT
-};
-
+/**
+ * Enumeration of recognized input contexts.
+ * An InputAction will only trigger when the InputController's
+ * current context is a match fpr the action's context bitmask
+ * property.
+ */
 enum InputContext : int {
     // Input is not recognized in any context.
     InputContext_None = 0x00,
@@ -33,7 +31,9 @@ enum InputContext : int {
     InputContext_All = -1
 };
 
+// Forward declaration for InputAction_NoCallback.
 struct InputAction;
+// Default callback for InputAction instances. Does nothing.
 void InputAction_NoCallback(InputAction* action);
 
 struct InputAction {
@@ -43,7 +43,7 @@ struct InputAction {
     InputContext context = InputContext_All;
     // Callback function to run when the input occurs or is occurring.
     std::function<void(InputAction* action)> active_callback = &InputAction_NoCallback;
-    // Set by the InputController.
+    // State flag set by the InputController.
     // Check this to see if the input occurred/is occurring during
     // the current frame.
     bool active = false;
@@ -53,9 +53,33 @@ typedef int InputActionHandle;
 const InputActionHandle InputActionHandle_None = -1;
 
 struct InputActionKeyBind {
+    InputActionHandle action;
     InputModifiedKey key;
     InputKeyState key_state;
-    InputActionHandle action;
+    std::string key_name;
+    
+    InputActionKeyBind(
+        InputActionHandle action,
+        InputModifiedKey key,
+        InputKeyState key_state = InputKeyState_Pressed
+    );
+    InputActionKeyBind(
+        InputActionHandle action,
+        std::string key_name,
+        InputKeyState key_state = InputKeyState_Pressed
+    );
+    
+    InputActionKeyBind(
+        InputActionHandle action,
+        InputModifiedKey key,
+        InputKeyState key_state,
+        std::string key_name
+    ):
+        action(action),
+        key(key),
+        key_state(key_state),
+        key_name(key_name)
+    {};
 };
 
 typedef int InputActionKeyBindHandle;
@@ -91,7 +115,7 @@ public:
     InputContext get_action_context(InputActionHandle handle);
     InputActionKeyBind* get_action_key_bind(InputActionKeyBindHandle handle);
     bool is_action_active(InputActionHandle handle);
-    void set_action_active(InputActionHandle handle, bool active);
+    void activate_action(InputActionHandle handle);
     
     InputContext get_current_context();
     void push_context(InputContext context);

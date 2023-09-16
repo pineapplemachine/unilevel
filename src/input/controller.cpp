@@ -1,46 +1,64 @@
 #include "controller.hpp"
 
-#ifdef DEBUG
-#include <iostream>
-#endif
+#include "spdlog/spdlog.h"
 
 void InputAction_NoCallback(InputAction* action) {}
 
+InputActionKeyBind::InputActionKeyBind(
+    InputActionHandle action,
+    InputModifiedKey key,
+    InputKeyState key_state
+) {
+    this->action = action;
+    this->key = key;
+    this->key_state = key_state;
+    this->key_name = InputModifiedKey_ToString(key);
+}
+
+InputActionKeyBind::InputActionKeyBind(
+    InputActionHandle action,
+    std::string key_name,
+    InputKeyState key_state
+) {
+    this->action = action;
+    this->key = InputModifiedKey_Parse(key_name);
+    this->key_state = key_state;
+    this->key_name = key_name;
+}
+
 void InputController::update() {
-    #ifdef DEBUG
-    if(ImGui::IsKeyPressed((ImGuiKey) InputKey_X)) {
-        std::cout << "This ptr: " << (long long int) this << "\n";
-        std::cout << "App ptr: " << (long long int) this->app << "\n";
-        std::cout << "Actions: " << this->actions.size() << "\n";
-        std::cout << "Keybinds: " << this->action_key_binds.size() << "\n";
-    }
-    #endif
     InputContext context = InputContext_General; // TODO
-    // for(auto bind : this->action_key_binds) {
-    for(int i = 0; i < this->action_key_binds.size(); ++i) {
-        auto bind = this->action_key_binds[i];
-        #ifdef DEBUG
-        if(ImGui::IsKeyDown((ImGuiKey) InputKey_Z)) {
-            std::cout << "? " << this->get_action_name(bind.action).c_str() << "\n";
-        }
-        #endif
+    for(auto action : this->actions) {
+        action.active = false;
+    }
+    for(auto bind : this->action_key_binds) {
         bool active = (
-            // (bind.action->context & context) != 0 &&
+            (bind.action->context & context) != 0 &&
             this->is_key_state(bind.key_state, bind.key)
         );
-        this->set_action_active(bind.action, active);
+        if(active) {
+            this->activate_action(bind.action);
+        }
         #ifdef DEBUG
-        if(bind.key_state == InputKeyState_Pressed) {
-            std::cout << "Action activated by key press:";
-            std::cout << this->get_action_name(bind.action).c_str() << "\n";
+        if(active && bind.key_state == InputKeyState_Pressed) {
+            spdlog::trace(
+                "Action '{}' activated by key press '{}'.",
+                this->get_action_name(bind.action), bind.key_name
+            );
         }
-        else if(bind.key_state == InputKeyState_Released) {
-            std::cout << "Action activated by key release:";
-            std::cout << this->get_action_name(bind.action).c_str() << "\n";
+        else if(active && bind.key_state == InputKeyState_Released) {
+            spdlog::trace(
+                "Action '{}' activated by key release '{}'.",
+                this->get_action_name(bind.action), bind.key_name
+            );
         }
-        else if(bind.key_state == InputKeyState_Down && this->is_key_pressed(bind.key)) {
-            std::cout << "Action activated by key down:";
-            std::cout << this->get_action_name(bind.action).c_str() << "\n";
+        else if(active && bind.key_state == InputKeyState_Down &&
+            this->is_key_pressed(bind.key)
+        ) {
+            spdlog::trace(
+                "Action '{}' activated by key down '{}'.",
+                this->get_action_name(bind.action), bind.key_name
+            );
         }
         #endif
     }
@@ -57,11 +75,12 @@ InputActionKeyBindHandle InputController::add_action_key_bind(
 ) {
     auto handle = this->action_key_binds.size();
     this->action_key_binds.push_back(bind);
-    #ifdef DEBUG
-    std::cout << "This ptr: " << (long long int) this << "\n";
-    std::cout << "App ptr: " << (long long int) this->app << "\n";
-    std::cout << "Added a keybind. Total: " << this->action_key_binds.size() << "\n";
-    #endif
+    spdlog::debug(
+        "Added key bind: Action '{}' bound to key '{}' {}.",
+        this->get_action_name(bind.action),
+        bind.key_name,
+        InputKeyState_GetName(bind.key_state)
+    );
     return (InputActionKeyBindHandle) handle;
 }
 
@@ -93,11 +112,13 @@ bool InputController::is_action_active(InputActionHandle handle) {
     return this->actions.at(handle).active;
 }
 
-void InputController::set_action_active(InputActionHandle handle, bool active) {
+void InputController::activate_action(InputActionHandle handle) {
     auto action = &this->actions.at(handle);
-    action->active = active;
-    if(action) {
-        action->active_callback(action);
+    if(!action->active) {
+        action->active = true;
+        if(action) {
+            action->active_callback(action);
+        }
     }
 }
 

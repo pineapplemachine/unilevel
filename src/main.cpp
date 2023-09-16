@@ -6,9 +6,7 @@
 
 #include "app.hpp"
 
-App app;
-
 int main(int argc, char **argv) {
-    app = App();
+    App app = App();
     return app.main();
 }

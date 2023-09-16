@@ -1,19 +1,49 @@
 #pragma once
 
-#include <array>
 #include <string>
 
 #include "imgui.h"
 
+/**
+ * Enumeration of key states that may trigger an InputAction
+ * via an InputActionKeyBind.
+ */
+enum InputKeyState : int {
+    // Action is never triggered.
+    InputKeyState_None = 0,
+    // Action is triggered every frame that the key is held down.
+    InputKeyState_Down = 1,
+    // Action is triggered as the key is pressed down.
+    InputKeyState_Pressed = 2,
+    // Action is triggered as the key is released from a down state.
+    InputKeyState_Released = 3,
+    InputKeyState_COUNT
+};
+
+/**
+ * Enumeration of modifier keys and modifier key combinations,
+ * e.g. Shift or Ctrl+Shift.
+ */
 enum InputModifierKey : int {
+    // No modifiers.
     InputModifierKey_None = 0x00,
+    // Ctrl (and/or Super, depending on InputController config)
     InputModifierKey_Ctrl = 0x01,
+    // Shift
     InputModifierKey_Shift = 0x02,
+    // Ctrl/Super and Shift
     InputModifierKey_CtrlShift = 0x03,
+    // Alt
     InputModifierKey_Alt = 0x04,
+    // Ctrl and Alt
     InputModifierKey_CtrlAlt = 0x05,
+    // Shift and Alt
     InputModifierKey_ShiftAlt = 0x06,
+    // Ctrl/Super, Shift, and Alt
     InputModifierKey_CtrlShiftAlt = 0x07,
+    // All modifier keys together: Ctrl/Super, Shift, and Alt
+    InputModifierKey_All = InputModifierKey_CtrlShiftAlt,
+    // Special case. Input is recognized for any combination of modifiers.
     InputModifierKey_Any = -1
 };
 
@@ -166,11 +196,17 @@ const InputModifiedKey InputModifiedKey_None = (
     InputModifiedKey{InputKey_None, InputModifierKey_None}
 );
 
+// Given an InputKeyState value, get a name string.
+const char* InputKeyState_GetName(InputKeyState state);
+
 // Given an InputKey value, get a name string.
 const char* InputKey_GetName(InputKey key);
 
 // Given a key name string, get an InputKey value.
 InputKey InputKey_GetFromName(std::string name);
+
+// Given an InputModifierKey value, get a name string.
+const char* InputModifierKey_GetName(InputModifierKey modifier);
 
 // Given a modifier key name string, get an InputModifierKey value.
 // Recognizes "Ctrl", "Shift", and "Alt".
@@ -181,12 +217,42 @@ InputModifierKey InputModifierKey_GetFromName(std::string name);
 // get an InputModifiedKey struct representing that key combination.
 InputModifiedKey InputModifiedKey_Parse(std::string text);
 
+// Given a key with modifier, get a string representing that key
+// combination in a readable way, e.g. "Ctrl+Shift+Z".
+std::string InputModifiedKey_ToString(InputModifiedKey& key);
+
+const char* const InputKeyState_Unknown_Name = "[Unknown]";
+
+const char* const InputKeyState_Names[] = {
+    "Never",
+    "Down",
+    "Pressed",
+    "Released",
+};
+
+const char* const InputModifierKey_None_Name = "";
 const char* const InputModifierKey_Ctrl_Name = "Ctrl";
 const char* const InputModifierKey_Shift_Name = "Shift";
 const char* const InputModifierKey_Alt_Name = "Alt";
+const char* const InputModifierKey_Any_Name = "Any";
+const char* const InputModifierKey_Separator = "+";
+
+const char* const InputModifierKey_Names[] = {
+    "",
+    "Ctrl",
+    "Shift",
+    "Ctrl+Shift",
+    "Alt",
+    "Ctrl+Alt",
+    "Shift+Alt",
+    "Ctrl+Shift+Alt",
+};
+
 const char* const InputKey_None_Name = "";
 const char* const InputKey_Unknown_Name = "[Unknown]";
 
+// TODO: provide multiple names for parsing to recognize
+// e.g. "Left Arrow" and "LeftArrow"
 const char* const InputKey_Names[] = {
     "Tab",
     "LeftArrow",
