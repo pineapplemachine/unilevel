@@ -1,16 +1,25 @@
 #include "command_palette.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <utility>
 
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "spdlog/spdlog.h"
 
 #include "app.hpp"
 #include "util/string.hpp"
 #include "gui/imgui_util.hpp"
 
+bool GUICommandPaletteCommand_AlwaysActiveCallback(
+    GUICommandPaletteCommand* command
+) {
+    return true;
+}
+
 void GUICommandPalette::init() {
+    spdlog::debug("Initializing GUICommandPalette.");
     this->action_show = this->app->input.add_action(InputAction{
         "ui_command_palette_show",
         InputContext_General
@@ -50,13 +59,22 @@ void GUICommandPalette::init() {
         InputActionKeyBind(this->action_activate, "Enter")
     );
     this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_activate, "KeypadEnter")
+    );
+    this->app->input.add_action_key_bind(
         InputActionKeyBind(this->action_escape, "Escape")
     );
     this->app->input.add_action_key_bind(
         InputActionKeyBind(this->action_up, "UpArrow")
     );
     this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_up, "Shift+Tab")
+    );
+    this->app->input.add_action_key_bind(
         InputActionKeyBind(this->action_down, "DownArrow")
+    );
+    this->app->input.add_action_key_bind(
+        InputActionKeyBind(this->action_down, "Tab")
     );
     this->app->input.add_action_key_bind(
         InputActionKeyBind(this->action_home, "Ctrl+UpArrow")
@@ -70,17 +88,20 @@ void GUICommandPalette::show() {
     if(this->showing) {
         return;
     }
+    spdlog::debug("Showing GUICommandPalette.");
     this->showing = true;
     this->show_init = true;
     this->selected_result_index = 0;
     this->hovered_result_index = -1;
     this->pressed_result_index = -1;
     this->input_text[0] = 0;
+    this->input_text_submitted = false;
     this->update_results();
     this->app->input.push_context(InputContext_CommandPalette);
 }
 
 void GUICommandPalette::hide() {
+    spdlog::debug("Hiding GUICommandPalette.");
     this->showing = false;
     this->show_init = false;
     this->app->input.pop_context(InputContext_CommandPalette);
@@ -88,6 +109,20 @@ void GUICommandPalette::hide() {
 
 bool GUICommandPalette::is_showing() {
     return this->showing;
+}
+
+int imgui_input_text_modified_callback(
+    ImGuiInputTextCallbackData* data
+) {
+    auto palette = (GUICommandPalette*) data->UserData;
+    IM_ASSERT(palette != nullptr);
+    return palette->input_text_modified_callback();
+}
+
+int GUICommandPalette::input_text_modified_callback() {
+    this->selected_result_index = 0;
+    this->update_results();
+    return 0;
 }
 
 void GUICommandPalette::draw() {
@@ -99,7 +134,7 @@ void GUICommandPalette::draw() {
     const ImGuiStyle& style = im_context.Style;
     ImVec2 viewport = ImGui::GetMainViewport()->Size;
     ImGui::SetNextWindowPos(
-        ImVec2(viewport.x / 2.0f, 0),
+        ImVec2(viewport.x / 2.0f, viewport.y > 400 ? 0.05f : 0.0f),
         ImGuiCond_None,
         ImVec2(0.5f, 0.0f)
     );
@@ -133,28 +168,37 @@ void GUICommandPalette::draw() {
         this->show_init = false;
     }
     ImGui::SetNextItemWidth(window_content_width);
-    bool input_modified = ImGui::InputText(
+    bool input_submitted = ImGui::InputText(
         "##Input",
         this->input_text,
-        IM_ARRAYSIZE(this->input_text)
+        IM_ARRAYSIZE(this->input_text),
+        ImGuiInputTextFlags_EnterReturnsTrue,
+        &imgui_input_text_modified_callback,
+        (void*) this
     );
-    if(input_modified) {
-        this->selected_result_index = 0;
-        this->update_results();
+    if(input_submitted) {
+        this->input_text_submitted = true;
+        spdlog::trace("GUICommandPalette InputText field submitted.");
+    }
+    else if(ImGui::IsItemDeactivated()) {
+        spdlog::trace("GUICommandPalette InputText field deactivated.");
+        this->hide();
     }
     const int window_max_results_height = ImClamp(
         (int) (viewport.y / result_size.y), 2, 12
     );
-    const int window_results_height = ImMin(
+    const int window_results_height = ImMax(1, ImMin(
         window_max_results_height, (int) this->results.size()
-    );
+    ));
     const float window_content_height = (
         result_size.y * window_results_height
     );
+    ImGui::Dummy(ImVec2(0.0f, 0.125f * font_size_px));
     ImGui::BeginChild(
         "##Results",
         ImVec2(window_content_width, window_content_height)
     );
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0.0f, 0.0f});
     for(int i = 0; i < this->results.size(); ++i) {
         auto result = this->results[i];
         const bool result_pressed = this->draw_result(
@@ -164,8 +208,8 @@ void GUICommandPalette::draw() {
             this->pressed_result_index = i;
         }
     }
+    ImGui::PopStyleVar();
     if(this->results.size() == 0) {
-        // TODO: Why doesn't this show?
         ImGui::TextColored(
             ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled),
             "No matching commands."
@@ -189,12 +233,15 @@ void GUICommandPalette::update() {
         this->hide();
         return;
     }
-    if(this->app->input.is_action_active(this->action_activate)) {
+    if(this->input_text_submitted ||
+        this->app->input.is_action_active(this->action_activate)
+    ) {
         if(this->selected_result_index > 0 &&
             this->selected_result_index < this->results.size()
         ) {
-            auto result = this->results[this->selected_result_index];
-            this->activate_result(result);
+            this->activate_result(
+                this->results[this->selected_result_index]
+            );
         }
         this->hide();
         return;
@@ -230,15 +277,19 @@ void GUICommandPalette::update() {
 void GUICommandPalette::add_command(
     GUICommandPaletteCommand command
 ) {
-    // Order commands alphabetically by title
+    spdlog::debug(
+        "Adding GUICommandPalette command '{}'.",
+        command.name
+    );
+    // Order commands alphabetically by name
     auto comparator = [](
         const GUICommandPaletteCommand& a,
         const GUICommandPaletteCommand& b
     ) -> bool {
         return (ImStricmp(
-            a.title.c_str(),
-            b.title.c_str()
-        ) < 0);
+            a.name.c_str(),
+            b.name.c_str()
+        ) > 0);
     };
     auto location = std::lower_bound(
         this->commands.begin(),
@@ -247,6 +298,9 @@ void GUICommandPalette::add_command(
         comparator
     );
     this->commands.insert(location, std::move(command));
+    this->command_activated_times.push_back(
+        std::numeric_limits<GUICommandPaletteCommandTime>::min()
+    );
 }
 
 // Based on ImGui::ButtonEx implementation in imgui_widgets.cpp
@@ -270,6 +324,7 @@ bool GUICommandPalette::draw_result(
     const ImGuiID id = window->GetID(result_index);
     const ImVec2 pos = window->DC.CursorPos;
     const ImRect box = ImRect(pos, pos + size);
+    ImGui::ItemSize(size, 0.0f);
     if(!ImGui::ItemAdd(box, id)) {
         return false;
     }
@@ -279,9 +334,9 @@ bool GUICommandPalette::draw_result(
     bool held = false;
     bool pressed = ImGui::ButtonBehavior(box, id, &hovered, &held, flags);
     const ImU32 fill_color = ImGui::GetColorU32(
-        (held && hovered && result.active) ? ImGuiCol_ButtonActive :
-        ((hovered && result.active) || selected) ? ImGuiCol_ButtonHovered :
-        ImGuiCol_Button
+        (held && hovered && result.active) ? ImGuiCol_FrameBgActive :
+        ((hovered && result.active) || selected) ? ImGuiCol_FrameBgHovered :
+        ImGuiCol_FrameBg
     );
     window->DrawList->AddRectFilled(box.Min, box.Max, fill_color, 0.0f);
     const float border_size = ImMax(
@@ -302,8 +357,8 @@ bool GUICommandPalette::draw_result(
     if(im_context.LogEnabled) {
         ImGui::LogSetNextTextDecoration("[", "]");
     }
-    const ImVec2 title_label_size = ImGui::CalcTextSize(
-        command.title.c_str(), nullptr, true
+    const ImVec2 name_label_size = ImGui::CalcTextSize(
+        command.name.c_str(), nullptr, true
     );
     const ImU32 text_color = ImGui::GetColorU32(
         result.active ? ImGuiCol_Text : ImGuiCol_TextDisabled
@@ -313,7 +368,7 @@ bool GUICommandPalette::draw_result(
         (float) this->context->get_font_size_px(this->font),
         box.Min + style.FramePadding,
         text_color,
-        command.title.c_str(),
+        command.name.c_str(),
         nullptr,
         0.0f,
         nullptr
@@ -327,52 +382,92 @@ bool GUICommandPalette::draw_result(
     return pressed;
 }
 
-void GUICommandPalette::activate_result(GUICommandPaletteResult result) {
+void GUICommandPalette::activate_result(
+    GUICommandPaletteResult& result
+) {
+    IM_ASSERT(
+        this->commands.size() ==
+        this->command_activated_times.size()
+    );
+    spdlog::trace("Activating GUICommandPalette result.");
     if(result.command < 0 ||
         result.command >= this->commands.size()
     ) {
         return;
     }
-    GUICommandPaletteCommand& command = this->commands[result.command];
+    GUICommandPaletteCommand& command = (
+        this->commands[result.command]
+    );
     this->hide();
+    spdlog::debug(
+        "Activating GUICommandPalette command '{}'.",
+        command.name
+    );
     command.activated_callback();
+    this->command_activated_times[result.command] = (
+        this->command_time
+    );
+    this->command_time++;
+}
+
+void GUICommandPalette::update_command_result(const int i) {
+    // TODO: also compare alias strings, in addition to name
+    auto& command = this->commands[i];
+    auto input_str = std::string(this->input_text); // TODO: memory?
+    const int age = (
+        this->command_activated_times[i] -
+        this->command_time
+    );
+    const int age_score = ImMin(age, 16);
+    const bool active = (
+        command.get_active_callback(&command)
+    );
+    const int active_score = active ? 0 : 64;
+    int sort_score = 0;
+    if(string_starts_with_insensitive(command.name, input_str)) {
+        if(command.name.size() == input_str.size()) {
+            sort_score = -127;
+        }
+        else {
+            sort_score = active_score + age_score;
+        }
+    }
+    else {
+        const int match_score = string_sub_distance_insensitive(
+            input_str, command.name
+        );
+        sort_score = active_score + age_score + (match_score << 2);
+    }
+    if(sort_score <= 1 + input_str.size()) {
+        auto result = GUICommandPaletteResult{
+            .command = i,
+            .sort_score = sort_score,
+            .active = active
+        };
+        this->results.push_back(result);
+    }
 }
 
 void GUICommandPalette::update_results() {
+    IM_ASSERT(
+        this->commands.size() ==
+        this->command_activated_times.size()
+    );
+    spdlog::trace("Updating GUICommandPalette results list.");
     this->results.clear();
     if(this->input_text[0] == 0 ||
         this->input_text[IM_ARRAYSIZE(this->input_text) - 1] != 0
     ) {
         for(int i = 0; i < this->commands.size(); ++i) {
-            auto command = this->commands[i];
-            bool active = command.get_active_callback();
+            auto& command = this->commands[i];
+            bool active = command.get_active_callback(&command);
             auto result = GUICommandPaletteResult{i, 0, active};
             this->results.push_back(result);
         }
     }
     else {
         for(int i = 0; i < this->commands.size(); ++i) {
-            // TODO: also compare alias strings, in addition to title
-            auto command = this->commands[i];
-            bool active = command.get_active_callback();
-            auto input_str = std::string(this->input_text); // TODO: memory?
-            int sort_score = 0;
-            if(string_starts_with_insensitive(command.title, input_str)) {
-                bool exact = (command.title.size() == input_str.size());
-                sort_score = (exact ? -1 : 0);
-            }
-            else {
-                sort_score = string_sub_distance_insensitive(
-                    input_str, command.title
-                );
-            }
-            if(sort_score <= 1 + input_str.size()) {
-                if(!active) {
-                    sort_score += 1 + input_str.size();
-                }
-                auto result = GUICommandPaletteResult{i, sort_score, active};
-                this->results.push_back(result);
-            }
+            this->update_command_result(i);
         }
         auto comparator = [](
             const GUICommandPaletteResult& a,

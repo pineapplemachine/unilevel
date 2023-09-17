@@ -28,10 +28,10 @@ InputActionKeyBind::InputActionKeyBind(
 
 void InputController::update() {
     InputContext context = InputContext_General; // TODO
-    for(auto action : this->actions) {
+    for(auto& action : this->actions) {
         action.active = false;
     }
-    for(auto bind : this->action_key_binds) {
+    for(auto& bind : this->action_key_binds) {
         auto action_context = this->get_action_context(bind.action);
         bool active = (
             (action_context & context) != 0 &&
@@ -134,6 +134,7 @@ InputContext InputController::get_current_context() {
 
 void InputController::push_context(InputContext context) {
     this->context_stack.push_back(context);
+    spdlog::trace("Pushed InputController context {}.", context);
 }
 
 void InputController::pop_context(InputContext context) {
@@ -141,6 +142,7 @@ void InputController::pop_context(InputContext context) {
         this->context_stack.back() == context
     ) {
         this->context_stack.pop_back();
+        spdlog::trace("Popped InputController context {}.", context);
     }
 }
 
@@ -229,9 +231,9 @@ bool InputController::is_key_state(
 ) {
     ImGuiIO& io = ImGui::GetIO();
     // TODO: make toggleable depending on action/keybind?
-    if(io.WantCaptureKeyboard) {
-        return false;
-    }
+    // if(io.WantCaptureKeyboard) {
+    //     return false;
+    // }
     switch(state) {
         case InputKeyState_Down: {
             return ImGui::IsKeyDown((ImGuiKey) key);
