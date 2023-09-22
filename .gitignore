@@ -3,7 +3,6 @@ cached/
 include/
 lib/
 obj/
-scratch/
 
 unilevel.exe
 unilevel_debug.exe
@@ -22,5 +21,8 @@ assets/fonts/**/LICENSE
 !assets/fonts/PublicSans/PublicSans-Bold.ttf
 !assets/fonts/PublicSans/PublicSans-Italic.ttf
 !assets/fonts/PublicSans/PublicSans-BoldItalic.ttf
+
+scratch/**/*.*
+!scratch/stringdist.js
 
 *.pyc
