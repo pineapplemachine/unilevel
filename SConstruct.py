@@ -48,13 +48,23 @@ env = Environment(
     ],
     CPPDEFINES = [
         cpp_platform,
-        "IMGUI_DEFINE_MATH_OPERATORS",
+        # Enables ImGui Freetype font rendering support.
+        # https://github.com/ocornut/imgui/blob/master/misc/freetype/README.md#usage
         "IMGUI_ENABLE_FREETYPE",
+        # Allows the use of math operators with ImGui math types.
+        # https://github.com/ocornut/imgui/issues/2832#issuecomment-538777840
+        "IMGUI_DEFINE_MATH_OPERATORS",
+        # Improves compilation time for spdlog dependency.
+        # Note that spdlog must be compiled first to produce `libspdlog.a`,
+        # a step which is automated by `scripts/get_dependencies.py`.
+        # https://github.com/gabime/spdlog/issues/1708#issuecomment-709589158
+        "SPDLOG_COMPILED_LIB",
     ],
     LIBS = Split(cpp_libs),
 )
 
 if build_mode == "debug":
+    binary_name += "_debug"
     env.Append(
         CPPDEFINES="DEBUG",
         CPPFLAGS=[
@@ -66,12 +76,17 @@ if build_mode == "debug":
             # "-static-libstdc++",
         ],
     )
-    binary_name += "_debug"
 elif build_mode == "fast":
-    env.Append(CPPFLAGS=["-O0"])
     binary_name += "_fast"
+    env.Append(
+        CPPDEFINES="NDEBUG",
+        CPPFLAGS=["-O0"],
+    )
 elif build_mode == "release":
-    env.Append(CPPFLAGS=["-O2"])
+    env.Append(
+        CPPDEFINES="NDEBUG",
+        CPPFLAGS=["-O2"],
+    )
 else:
     raise ValueError("Unknown build mode %s" % build_mode)
 
