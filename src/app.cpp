@@ -28,6 +28,8 @@ void App::init() {
     rlImGuiSetup(true);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags = ImGuiConfigFlags_NavNoCaptureKeyboard; // ?
+    // InputController setup
+    this->input.push_context(InputContext_General);
     // Initialize components
     this->gui_context.init(); // Loads fonts
     this->gui_command_palette.init();

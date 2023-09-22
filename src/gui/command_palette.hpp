@@ -63,6 +63,7 @@ public:
     int pressed_result_index = -1;
     char input_text[1024] = {};
     bool input_text_submitted = false;
+    bool input_text_modified = false;
     GUICommandPaletteCommandTime command_time = 0;
     std::vector<GUICommandPaletteCommand> commands;
     std::vector<GUICommandPaletteCommandTime> command_activated_times;
@@ -100,7 +101,6 @@ public:
         const ImVec2& size
     );
     void activate_result(GUICommandPaletteResult& result);
-    int input_text_modified_callback();
     void update_results();
     void update_command_result(const int i);
 };

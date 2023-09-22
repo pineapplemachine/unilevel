@@ -14,17 +14,6 @@
 bool string_starts_with_insensitive(std::string a_str, std::string b_str);
 
 /**
- * Compute a case-insensitive string edit distance.
- * 
- * This string distance function scores runs of insertion
- * edits as just 1, so "sub" scores the same against
- * "substitute" or "substring".
- * 
- * The first argument should normally be a search term and
- * the second argument should normally be a string being
- * matched against.
- * 
- * Only ASCII characters are compared case-insensitively.
- * Does not perform unicode normalization.
+ * TODO: Document this
  */
-int string_sub_distance_insensitive(std::string a_str, std::string b_str);
+int string_fuzzy_match_score(std::string needle_str, std::string haystack_str);

@@ -1,7 +1,6 @@
 #include "command_palette.hpp"
 
 #include <algorithm>
-#include <limits>
 #include <utility>
 
 #include "imgui.h"
@@ -111,21 +110,8 @@ bool GUICommandPalette::is_showing() {
     return this->showing;
 }
 
-int imgui_input_text_modified_callback(
-    ImGuiInputTextCallbackData* data
-) {
-    auto palette = (GUICommandPalette*) data->UserData;
-    IM_ASSERT(palette != nullptr);
-    return palette->input_text_modified_callback();
-}
-
-int GUICommandPalette::input_text_modified_callback() {
-    this->selected_result_index = 0;
-    this->update_results();
-    return 0;
-}
-
 void GUICommandPalette::draw() {
+    this->input_text_modified = false;
     this->hovered_result_index = -1;
     if(!this->showing) {
         return;
@@ -172,9 +158,7 @@ void GUICommandPalette::draw() {
         "##Input",
         this->input_text,
         IM_ARRAYSIZE(this->input_text),
-        ImGuiInputTextFlags_EnterReturnsTrue,
-        &imgui_input_text_modified_callback,
-        (void*) this
+        ImGuiInputTextFlags_EnterReturnsTrue
     );
     if(input_submitted) {
         this->input_text_submitted = true;
@@ -183,6 +167,9 @@ void GUICommandPalette::draw() {
     else if(ImGui::IsItemDeactivated()) {
         spdlog::trace("GUICommandPalette InputText field deactivated.");
         this->hide();
+    }
+    else if(ImGui::IsItemEdited()) {
+        this->input_text_modified = true;
     }
     const int window_max_results_height = ImClamp(
         (int) (viewport.y / result_size.y), 2, 12
@@ -210,14 +197,98 @@ void GUICommandPalette::draw() {
     }
     ImGui::PopStyleVar();
     if(this->results.size() == 0) {
-        ImGui::TextColored(
-            ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled),
-            "No matching commands."
+        const ImU32 no_match_color = (
+            ImGui::GetColorU32(ImGuiCol_TextDisabled)
         );
+        ImGui::SetCursorPosX(
+            ImGui::GetCursorPosX() + style.FramePadding.x
+        );
+        ImGui::PushStyleColor(ImGuiCol_Text, no_match_color);
+        ImGui::TextUnformatted("No matching commands.");
+        ImGui::PopStyleColor();
     }
     ImGui::PopFont();
     ImGui::EndChild();
     ImGui::End();
+}
+
+// Based on ImGui::ButtonEx implementation in imgui_widgets.cpp
+bool GUICommandPalette::draw_result(
+    int result_index,
+    GUICommandPaletteResult result,
+    const ImVec2& size
+) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if(window->SkipItems) {
+        return false;
+    }
+    if(result.command < 0 ||
+        result.command >= this->commands.size()
+    ) {
+        return false;
+    }
+    GUICommandPaletteCommand& command = this->commands[result.command];
+    ImGuiContext& im_context = *GImGui;
+    const ImGuiStyle& style = im_context.Style;
+    const ImGuiID id = window->GetID(result_index);
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImRect box = ImRect(pos, pos + size);
+    ImGui::ItemSize(size, 0.0f);
+    if(!ImGui::ItemAdd(box, id)) {
+        return false;
+    }
+    const ImGuiButtonFlags flags = ImGuiButtonFlags_MouseButtonLeft;
+    bool selected = (result_index == this->selected_result_index);
+    bool hovered = false;
+    bool held = false;
+    bool pressed = ImGui::ButtonBehavior(box, id, &hovered, &held, flags);
+    const ImU32 fill_color = ImGui::GetColorU32(
+        (held && hovered && result.active) ? ImGuiCol_FrameBgHovered :
+        ((hovered && result.active) || selected) ? ImGuiCol_FrameBg :
+        ImGuiCol_WindowBg
+    );
+    window->DrawList->AddRectFilled(box.Min, box.Max, fill_color, 0.0f);
+    const float border_size = ImMax(
+        1.0f, im_context.Style.FrameBorderSize
+    );
+    if(selected) {
+        const ImU32 border_color = ImGui::GetColorU32(ImGuiCol_Border);
+        window->DrawList->AddRect(
+            box.Min, box.Max, border_color, 0.0f, 0, border_size
+        );
+    }
+    else {
+        // const ImU32 line_color = ImGui::GetColorU32(ImGuiCol_Separator);
+        // window->DrawList->AddLine(
+        //     box.GetTL(), box.GetTR(), line_color, border_size
+        // );
+    }
+    if(im_context.LogEnabled) {
+        ImGui::LogSetNextTextDecoration("[", "]");
+    }
+    const ImVec2 name_label_size = ImGui::CalcTextSize(
+        command.name.c_str(), nullptr, true
+    );
+    const ImU32 text_color = ImGui::GetColorU32(
+        result.active ? ImGuiCol_Text : ImGuiCol_TextDisabled
+    );
+    window->DrawList->AddText(
+        this->context->get_imgui_font(this->font),
+        (float) this->context->get_font_size_px(this->font),
+        box.Min + style.FramePadding,
+        text_color,
+        command.name.c_str(),
+        nullptr,
+        0.0f,
+        nullptr
+    );
+    if(hovered && command.summary.size() > 0) {
+        ImGuiUtil::SetTooltipUnformatted(command.summary.c_str());
+    }
+    if(hovered) {
+        this->hovered_result_index = result_index;
+    }
+    return pressed;
 }
 
 void GUICommandPalette::update() {
@@ -272,6 +343,10 @@ void GUICommandPalette::update() {
             this->results[this->pressed_result_index]
         );
     }
+    if(this->input_text_modified) {
+        this->selected_result_index = 0;
+        this->update_results();
+    }
 }
 
 void GUICommandPalette::add_command(
@@ -298,88 +373,7 @@ void GUICommandPalette::add_command(
         comparator
     );
     this->commands.insert(location, std::move(command));
-    this->command_activated_times.push_back(
-        std::numeric_limits<GUICommandPaletteCommandTime>::min()
-    );
-}
-
-// Based on ImGui::ButtonEx implementation in imgui_widgets.cpp
-bool GUICommandPalette::draw_result(
-    int result_index,
-    GUICommandPaletteResult result,
-    const ImVec2& size
-) {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if(window->SkipItems) {
-        return false;
-    }
-    if(result.command < 0 ||
-        result.command >= this->commands.size()
-    ) {
-        return false;
-    }
-    GUICommandPaletteCommand& command = this->commands[result.command];
-    ImGuiContext& im_context = *GImGui;
-    const ImGuiStyle& style = im_context.Style;
-    const ImGuiID id = window->GetID(result_index);
-    const ImVec2 pos = window->DC.CursorPos;
-    const ImRect box = ImRect(pos, pos + size);
-    ImGui::ItemSize(size, 0.0f);
-    if(!ImGui::ItemAdd(box, id)) {
-        return false;
-    }
-    const ImGuiButtonFlags flags = ImGuiButtonFlags_MouseButtonLeft;
-    bool selected = (result_index == this->selected_result_index);
-    bool hovered = false;
-    bool held = false;
-    bool pressed = ImGui::ButtonBehavior(box, id, &hovered, &held, flags);
-    const ImU32 fill_color = ImGui::GetColorU32(
-        (held && hovered && result.active) ? ImGuiCol_FrameBgActive :
-        ((hovered && result.active) || selected) ? ImGuiCol_FrameBgHovered :
-        ImGuiCol_FrameBg
-    );
-    window->DrawList->AddRectFilled(box.Min, box.Max, fill_color, 0.0f);
-    const float border_size = ImMax(
-        1.0f, im_context.Style.FrameBorderSize
-    );
-    if(selected) {
-        const ImU32 border_color = ImGui::GetColorU32(ImGuiCol_Border);
-        window->DrawList->AddRect(
-            box.Min, box.Max, border_color, 0.0f, 0, border_size
-        );
-    }
-    else {
-        const ImU32 line_color = ImGui::GetColorU32(ImGuiCol_Separator);
-        window->DrawList->AddLine(
-            box.GetTL(), box.GetTR(), line_color, border_size
-        );
-    }
-    if(im_context.LogEnabled) {
-        ImGui::LogSetNextTextDecoration("[", "]");
-    }
-    const ImVec2 name_label_size = ImGui::CalcTextSize(
-        command.name.c_str(), nullptr, true
-    );
-    const ImU32 text_color = ImGui::GetColorU32(
-        result.active ? ImGuiCol_Text : ImGuiCol_TextDisabled
-    );
-    window->DrawList->AddText(
-        this->context->get_imgui_font(this->font),
-        (float) this->context->get_font_size_px(this->font),
-        box.Min + style.FramePadding,
-        text_color,
-        command.name.c_str(),
-        nullptr,
-        0.0f,
-        nullptr
-    );
-    if(hovered && command.summary.size() > 0) {
-        ImGuiUtil::SetTooltipUnformatted(command.summary.c_str());
-    }
-    if(hovered) {
-        this->hovered_result_index = result_index;
-    }
-    return pressed;
+    this->command_activated_times.push_back(-1024);
 }
 
 void GUICommandPalette::activate_result(
@@ -411,34 +405,28 @@ void GUICommandPalette::activate_result(
 }
 
 void GUICommandPalette::update_command_result(const int i) {
-    // TODO: also compare alias strings, in addition to name
+    // TODO: also compare alias strings, in addition to name?
     auto& command = this->commands[i];
-    auto input_str = std::string(this->input_text); // TODO: memory?
+    auto input_str = std::string(this->input_text);
     const int age = (
-        this->command_activated_times[i] -
-        this->command_time
+        this->command_time -
+        this->command_activated_times[i]
     );
-    const int age_score = ImMin(age, 16);
+    const int age_score = 0; // ImMin(age, 16) - 16; TODO
     const bool active = (
         command.get_active_callback(&command)
     );
-    const int active_score = active ? 0 : 64;
-    int sort_score = 0;
-    if(string_starts_with_insensitive(command.name, input_str)) {
-        if(command.name.size() == input_str.size()) {
-            sort_score = -127;
-        }
-        else {
-            sort_score = active_score + age_score;
-        }
-    }
-    else {
-        const int match_score = string_sub_distance_insensitive(
-            input_str, command.name
-        );
-        sort_score = active_score + age_score + (match_score << 2);
-    }
-    if(sort_score <= 1 + input_str.size()) {
+    const int active_score = active ? 0 : 32;
+    const int match_score = string_fuzzy_match_score(
+        input_str, command.name
+    );
+    const int sort_score = active_score + age_score + match_score;
+    spdlog::trace("string_fuzzy_match_score {}", match_score);
+    spdlog::trace(
+        "GUICommandPalette sort_score is {} for input '{}' and command '{}'.",
+        sort_score, input_str, command.name
+    );
+    if(match_score < 6 * input_str.size()) {
         auto result = GUICommandPaletteResult{
             .command = i,
             .sort_score = sort_score,
@@ -453,7 +441,10 @@ void GUICommandPalette::update_results() {
         this->commands.size() ==
         this->command_activated_times.size()
     );
-    spdlog::trace("Updating GUICommandPalette results list.");
+    spdlog::trace(
+        "Updating GUICommandPalette results for input text '{}'.",
+        this->input_text
+    );
     this->results.clear();
     if(this->input_text[0] == 0 ||
         this->input_text[IM_ARRAYSIZE(this->input_text) - 1] != 0

@@ -27,41 +27,41 @@ InputActionKeyBind::InputActionKeyBind(
 }
 
 void InputController::update() {
-    InputContext context = InputContext_General; // TODO
+    InputContext current_context = this->get_current_context();
     for(auto& action : this->actions) {
         action.active = false;
     }
     for(auto& bind : this->action_key_binds) {
-        auto action_context = this->get_action_context(bind.action);
+        auto action_context = (
+            this->get_action_context(bind.action)
+        );
         bool active = (
-            (action_context & context) != 0 &&
+            (action_context & current_context) != 0 &&
             this->is_key_state(bind.key_state, bind.key)
         );
         if(active) {
+            if(bind.key_state == InputKeyState_Pressed) {
+                spdlog::trace(
+                    "Action '{}' activated by key press '{}'.",
+                    this->get_action_name(bind.action), bind.key_name
+                );
+            }
+            else if(bind.key_state == InputKeyState_Released) {
+                spdlog::trace(
+                    "Action '{}' activated by key release '{}'.",
+                    this->get_action_name(bind.action), bind.key_name
+                );
+            }
+            else if(bind.key_state == InputKeyState_Down &&
+                this->is_key_pressed(bind.key)
+            ) {
+                spdlog::trace(
+                    "Action '{}' activated by key down '{}'.",
+                    this->get_action_name(bind.action), bind.key_name
+                );
+            }
             this->activate_action(bind.action);
         }
-        #ifdef DEBUG
-        if(active && bind.key_state == InputKeyState_Pressed) {
-            spdlog::trace(
-                "Action '{}' activated by key press '{}'.",
-                this->get_action_name(bind.action), bind.key_name
-            );
-        }
-        else if(active && bind.key_state == InputKeyState_Released) {
-            spdlog::trace(
-                "Action '{}' activated by key release '{}'.",
-                this->get_action_name(bind.action), bind.key_name
-            );
-        }
-        else if(active && bind.key_state == InputKeyState_Down &&
-            this->is_key_pressed(bind.key)
-        ) {
-            spdlog::trace(
-                "Action '{}' activated by key down '{}'.",
-                this->get_action_name(bind.action), bind.key_name
-            );
-        }
-        #endif
     }
 }
 
@@ -183,9 +183,9 @@ bool InputController::is_modifier_key_down(InputModifierKey modifier) {
 
 bool InputController::is_key_down(InputKey key) {
     ImGuiIO& io = ImGui::GetIO();
-    if(io.WantCaptureKeyboard) {
-        return false;
-    }
+    // if(io.WantCaptureKeyboard) {
+    //     return false;
+    // }
     return ImGui::IsKeyDown((ImGuiKey) key);
 }
 
@@ -198,9 +198,9 @@ bool InputController::is_key_down(InputModifiedKey modified_key) {
 
 bool InputController::is_key_pressed(InputKey key) {
     ImGuiIO& io = ImGui::GetIO();
-    if(io.WantCaptureKeyboard) {
-        return false;
-    }
+    // if(io.WantCaptureKeyboard) {
+    //     return false;
+    // }
     return ImGui::IsKeyPressed((ImGuiKey) key);
 }
 
@@ -213,9 +213,9 @@ bool InputController::is_key_pressed(InputModifiedKey modified_key) {
 
 bool InputController::is_key_released(InputKey key) {
     ImGuiIO& io = ImGui::GetIO();
-    if(io.WantCaptureKeyboard) {
-        return false;
-    }
+    // if(io.WantCaptureKeyboard) {
+    //     return false;
+    // }
     return ImGui::IsKeyReleased((ImGuiKey) key);
 }
 
