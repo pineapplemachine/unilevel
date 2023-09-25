@@ -149,7 +149,10 @@ void GUICommandPalette::draw() {
         window_content_width,
         ((float) font_size_px) + style.FramePadding.y
     );
-    if(this->show_init) {
+    const bool fake_out_click = ImGui::IsMouseReleased(
+        ImGuiPopupFlags_MouseButtonLeft
+    );
+    if(this->show_init || fake_out_click) {
         ImGui::SetKeyboardFocusHere();
         this->show_init = false;
     }
@@ -163,10 +166,6 @@ void GUICommandPalette::draw() {
     if(input_submitted) {
         this->input_text_submitted = true;
         spdlog::trace("GUICommandPalette InputText field submitted.");
-    }
-    else if(ImGui::IsItemDeactivated()) {
-        spdlog::trace("GUICommandPalette InputText field deactivated.");
-        this->hide();
     }
     else if(ImGui::IsItemEdited()) {
         this->input_text_modified = true;
@@ -209,6 +208,10 @@ void GUICommandPalette::draw() {
     }
     ImGui::PopFont();
     ImGui::EndChild();
+    if(!ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows)) {
+        spdlog::trace("GUICommandPalette window no longer focused.");
+        this->hide();
+    }
     ImGui::End();
 }
 
@@ -307,7 +310,7 @@ void GUICommandPalette::update() {
     if(this->input_text_submitted ||
         this->app->input.is_action_active(this->action_activate)
     ) {
-        if(this->selected_result_index > 0 &&
+        if(this->selected_result_index >= 0 &&
             this->selected_result_index < this->results.size()
         ) {
             this->activate_result(
@@ -336,7 +339,7 @@ void GUICommandPalette::update() {
             this->selected_result_index = max_result_index;
         }
     }
-    if(this->pressed_result_index > 0 &&
+    if(this->pressed_result_index >= 0 &&
         this->pressed_result_index < this->results.size()
     ) {
         this->activate_result(
