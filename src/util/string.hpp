@@ -2,6 +2,15 @@
 
 #include <string>
 
+// Type returned by string_fuzzy_match.
+struct StringFuzzyMatchResult {
+    // String match score. Higher is better.
+    int score;
+    // Total number of characters in the needle string that
+    // matched a corresponding character in the haystack string.
+    int matched;
+};
+
 /**
  * Case-insensitive comparison of start of string.
  * 
@@ -16,4 +25,6 @@ bool string_starts_with_insensitive(std::string a_str, std::string b_str);
 /**
  * TODO: Document this
  */
-int string_fuzzy_match_score(std::string needle_str, std::string haystack_str);
+StringFuzzyMatchResult string_fuzzy_match(
+    std::string needle_str, std::string haystack_str
+);

@@ -408,32 +408,39 @@ void GUICommandPalette::update_command_result(const int i) {
     // TODO: also compare alias strings, in addition to name?
     auto& command = this->commands[i];
     auto input_str = std::string(this->input_text);
-    const int age = (
+    const auto match = string_fuzzy_match(input_str, command.name);
+    // If there are too many characters in the search string that
+    // did not match the command name, then cut it from the results
+    const int unmatched_chars = input_str.size() - match.matched;
+    if(unmatched_chars >= 8) {
+        return;
+    }
+    // Otherwise take the match score and modify for recency and
+    // inactive/disabled commands
+    const int command_age = (
         this->command_time -
         this->command_activated_times[i]
     );
-    const int age_score = 0; // ImMin(age, 16) - 16; TODO
-    const bool active = (
+    const bool command_active = (
         command.get_active_callback(&command)
     );
-    const int active_score = active ? 0 : 32;
-    const int match_score = string_fuzzy_match_score(
-        input_str, command.name
+    const int recency_score = ImMax(0, 16 - command_age);
+    const int inactivity_score = command_active ? 0 : -32;
+    const int sort_score = match.score + recency_score + inactivity_score;
+    spdlog::trace(
+        "string_fuzzy_match: score {}, matched {}",
+        match.score, match.matched
     );
-    const int sort_score = active_score + age_score + match_score;
-    spdlog::trace("string_fuzzy_match_score {}", match_score);
     spdlog::trace(
         "GUICommandPalette sort_score is {} for input '{}' and command '{}'.",
         sort_score, input_str, command.name
     );
-    if(match_score < 6 * input_str.size()) {
-        auto result = GUICommandPaletteResult{
-            .command = i,
-            .sort_score = sort_score,
-            .active = active
-        };
-        this->results.push_back(result);
-    }
+    auto result = GUICommandPaletteResult{
+        .command = i,
+        .sort_score = sort_score,
+        .active = command_active
+    };
+    this->results.push_back(result);
 }
 
 void GUICommandPalette::update_results() {
@@ -464,7 +471,7 @@ void GUICommandPalette::update_results() {
             const GUICommandPaletteResult& a,
             const GUICommandPaletteResult& b
         ) -> bool {
-            return a.sort_score < b.sort_score;
+            return a.sort_score > b.sort_score;
         };
         std::sort(
             this->results.begin(),

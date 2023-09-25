@@ -3,9 +3,6 @@
 #include <string>
 #include <vector>
 
-// TODO: don't
-#include <spdlog/spdlog.h>
-
 bool string_starts_with_insensitive(std::string a_str, std::string b_str) {
     const auto a_length = a_str.size();
     const auto b_length = b_str.size();
@@ -87,7 +84,10 @@ inline int state_get_score(SubFuzzyMatchState* state) {
     );
 }
 
-int string_fuzzy_match_score(std::string needle_str, std::string haystack_str) {
+// TODO: would be good to factor in index of first matched char in score
+StringFuzzyMatchResult string_fuzzy_match(
+    std::string needle_str, std::string haystack_str
+) {
     const int needle_length = (int) needle_str.size();
     const int haystack_length = (int) haystack_str.size();
     const int row_length = 1 + needle_length;
@@ -136,7 +136,7 @@ int string_fuzzy_match_score(std::string needle_str, std::string haystack_str) {
                         state_prev_ij->match_count_run +
                         (state_prev_ij->run_current > 0 ? 1 : 0)
                     ),
-                    .match_boundary_count = ( // ?
+                    .match_boundary_count = (
                         state_prev_ij->match_boundary_count + ((
                             state_prev_ij->run_current == 0 &&
                             needle_char_is_word_char &&
@@ -165,10 +165,10 @@ int string_fuzzy_match_score(std::string needle_str, std::string haystack_str) {
             }
         }
     }
-    const int score_final = (
-        (needle_str.size() << 3) -
-        state_matrix[state_matrix_length - 1].score
-    );
+    // const int score_final = (
+    //     (needle_str.size() << 3) -
+    //     state_matrix[state_matrix_length - 1].score
+    // );
     // Potentially useful for debugging purposes
     // const auto state_final = &state_matrix[state_matrix_length - 1];
     // spdlog::trace("string_fuzzy_match_score {} {} {}", score_final, needle_str, haystack_str);
@@ -180,5 +180,9 @@ int string_fuzzy_match_score(std::string needle_str, std::string haystack_str) {
     // spdlog::trace("  match_count_run: {}", state_final->match_count_run);
     // spdlog::trace("  match_boundary_count: {}", state_final->match_boundary_count);
     // spdlog::trace("  score: {}", state_final->score);
-    return score_final;
+    // return score_final;
+    return StringFuzzyMatchResult{
+        .score = state_matrix[state_matrix_length - 1].score,
+        .matched = state_matrix[state_matrix_length - 1].match_count
+    };
 }
