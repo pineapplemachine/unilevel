@@ -113,6 +113,12 @@ RE_DEFINE = (
 RE_DEFINE_REPL = (
     r'\1#define \2'
 )
+RE_TYPEDEF = (
+    r'typedef\s+([^\s]+)\s+([^\s]+)\s*;'
+)
+RE_TYPEDEF_REPL = (
+    r'typedef \1 \2;'
+)
 RE_TYPEDEF_STRUCT = (
     r'(?s)typedef struct ([^\s]+) (\{.+?\} )?(\1);'
 )
@@ -217,8 +223,15 @@ class RaylibPrefixer:
                 src_dir_path, src_dir_original_path
             ))
             shutil.copytree(src_dir_path, src_dir_original_path)
-        file_names = list(os.listdir(src_dir_original_path))
-        file_names.append("external/rl_gputex.h")
+        file_names = [
+            "external/rl_gputex.h",
+            "external/win32_clipboard.h",
+            *os.listdir(src_dir_original_path),
+            *map(
+                lambda path: os.path.join("platforms", path),
+                os.listdir(os.path.join(src_dir_original_path, "platforms"))
+            )
+        ]
         for file_name in file_names:
             if not (
                 file_name == "build.zig" or
@@ -229,9 +242,10 @@ class RaylibPrefixer:
             ):
                 continue
             file_path = os.path.join(src_dir_original_path, file_name)
-            print("Reading original raylib src file:", file_path)
-            with open(file_path, "rt", encoding="utf-8") as src_file:
-                self.rl_src_files[file_name] = src_file.read()
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                print("Reading original raylib src file:", file_path)
+                with open(file_path, "rt", encoding="utf-8") as src_file:
+                    self.rl_src_files[file_name] = src_file.read()
     
     def write_raylib_src_files(self, src_dir_path):
         for file_name in self.rl_src_files.keys():
@@ -264,6 +278,8 @@ class RaylibPrefixer:
     def rename_declarations(self):
         for file_name in self.rl_src_files.keys():
             if not file_name.endswith(".h"):
+                continue
+            if file_name == "external/win32_clipboard.h":
                 continue
             self.rl_src_files[file_name] = (
                 self.rename_decls_src(self.rl_src_files[file_name])
@@ -302,6 +318,11 @@ class RaylibPrefixer:
         src_renamed = re.sub(
             RE_DEFINE,
             self.make_repl_fn(RE_DEFINE_REPL, [2], id_prefix=ID_PREFIX_UPPER),
+            src_renamed,
+        )
+        src_renamed = re.sub(
+            RE_TYPEDEF,
+            self.make_repl_fn(RE_TYPEDEF_REPL, [2]),
             src_renamed,
         )
         src_renamed = re.sub(
